@@ -24,6 +24,7 @@
 
 #include "Directory.h"
 #include "VolumeControlBlock.h"
+#include "FreeSpace.h"
 
 #include "fsLow.h"
 #include "mfs.h"
@@ -37,6 +38,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 
 	fsDir* dir = initRootDir();
 	VolumeControlBlock* vcb = vcbInit(BLOCK_SIZE, floor(BLOCK_SIZE/VOLUME_SIZE));
+
+	initFreeSpace();
+	LBAwrite(vcb,1,0);
+	LBAwrite(dir,1,1);
 
 	return 0;
 	}
