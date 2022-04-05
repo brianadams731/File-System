@@ -20,6 +20,10 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
+
+#include "Directory.h"
+#include "VolumeControlBlock.h"
 
 #include "fsLow.h"
 #include "mfs.h"
@@ -29,6 +33,10 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
+
+
+	fsDir* dir = initRootDir();
+	VolumeControlBlock* vcb = vcbInit(BLOCK_SIZE, floor(BLOCK_SIZE/VOLUME_SIZE));
 
 	return 0;
 	}
