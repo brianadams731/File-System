@@ -9,7 +9,7 @@
 * Group Name: Zombies
 * Project: Basic File System
 *
-* File: fsShell.c
+* File: FreeSpace.c
 *
 * Description: The FreeSpace file holds the structure of the
 * free space map that writes into the volume. Keep track of

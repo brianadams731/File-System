@@ -9,7 +9,7 @@
 * Group Name: Zombies
 * Project: Basic File System
 *
-* File: VolumeControlBlock.c
+* File: VolumeControlBlock.h
 *
 * Description: This header file includes the structure of the volume control block. 
 * All interfaces in this header are implemented in VolumeControlBlock.c, and are consumed by
