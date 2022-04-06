@@ -36,13 +36,18 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	/* TODO: Add any code you need to initialize your file system. */
 
 
-	fsDir* dir = initRootDir();
-	VolumeControlBlock* vcb = vcbInit(BLOCK_SIZE, floor(BLOCK_SIZE/VOLUME_SIZE));
+	
+	VolumeControlBlock* vcb = malloc(BLOCK_SIZE);
+	LBAread(vcb, 1, 0);
 
-	initFreeSpace();
-	LBAwrite(vcb,1,0);
-	LBAwrite(dir,1,1);
-
+	if(vcb->magicNumber != 16) 
+		{
+		VolumeControlBlock* vcb = vcbInit(BLOCK_SIZE, floor(BLOCK_SIZE/VOLUME_SIZE));
+		fsDir* dir = initRootDir();
+		initFreeSpace();
+		LBAwrite(vcb,1,0);
+		LBAwrite(dir,1,1);
+		}
 	return 0;
 	}
 	

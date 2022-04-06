@@ -21,18 +21,9 @@
 #ifndef DIRECTORY_H
 #define DIRECTORY_H
 
-#ifndef ROOT_DIR_LOCATION
 #define ROOT_DIR_LOCATION 42
-#endif
-
-#ifndef MAX_DIR_ENTRIES
 #define MAX_DIR_ENTRIES 10
-#endif
-
-#ifndef MAGIC_NUM_DIR
 #define MAGIC_NUM_DIR 9
-#endif
-
 #define DIR_SIZE 1
 
 typedef struct fsDirEntry {
