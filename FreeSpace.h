@@ -34,7 +34,7 @@
 #endif
 
 #ifndef FREE_ARRAY_LOCATION
-#define FREE_ARRAY_LOCATION 1
+#define FREE_ARRAY_LOCATION 2
 #endif
 
 

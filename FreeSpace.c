@@ -45,7 +45,7 @@ void initFreeSpace()
 
     // 0 vcb, 5 fsm (verify #of blocks), 6 root [xxxxxx, ooooooooooooooooo....]
     // Marks off the blocks for free space
-    for (int i = 0; i <= 6; i++) 
+    for (int i = 0; i < 3; i++) 
     {
         freeArray[i] = 'X';
     }
