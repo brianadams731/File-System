@@ -52,14 +52,7 @@ void initFreeSpace()
         freeArray[i] = 'X';
     }
 
-    /*
-    // Marks the location off of free space
-    for (int i = FS_LOCATION - 1; i < VOLUME_SIZE / BLOCK_SIZE; i++) 
-    {
-        freeArray[i] = 'X';
-    }
-    */
-    //freeArrayptr = &freeArray;
+
     int retValue = LBAwrite( &freeArray,FREE_ARRAY_SIZE, FREE_ARRAY_LOCATION);
     
 }
