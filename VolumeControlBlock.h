@@ -11,7 +11,9 @@
 *
 * File: VolumeControlBlock.c
 *
-* Description: 
+* Description: This header file includes the structure 
+of the volume control block and the fields it contains. It also includes the 
+function protocol to initalize the volume control block 
 **************************************************************/
 
 #define VOLUME_SIZE 100000

@@ -11,7 +11,8 @@
 *
 * File: VolumeControlBlock.c
 *
-* Description:
+* Description: This file contains the implmentaion of the volume 
+control block initalization funtion and returns it to the user
 **************************************************************/
 
 #include "VolumeControlBlock.h"

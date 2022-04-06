@@ -11,6 +11,9 @@
 * Description: Main driver for file system assignment.
 *
 * This file is where you will start and initialize your system
+It checks if the volume control block pointer matches the signature, 
+if it does it will initalizze the root directory, volume control block
+and free space. 
 *
 **************************************************************/
 
