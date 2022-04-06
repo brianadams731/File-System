@@ -11,7 +11,7 @@
 *
 * File: fsShell.c
 *
-* Description: The FreeSpace file holds the strucutre of the
+* Description: The FreeSpace file holds the structure of the
 * free space map that writes into the volume. Keep track of
 * the available space in the sample volume.
 **************************************************************/
