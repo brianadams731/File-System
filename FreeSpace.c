@@ -31,6 +31,8 @@
 * mark the spaces off the blocks when the file system
 * is started. Which would include spaces for,
 * FreeSpace map, and Volume control block.
+* - Marked with 0 if a block is free
+* - Marked with X if a block is being used
 *******************************************************/
 void initFreeSpace() 
 {
