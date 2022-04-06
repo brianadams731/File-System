@@ -1,9 +1,12 @@
 /**************************************************************
-* Class:  CSC-415-0# - Fall 2021
-* Names: 
-* Student IDs:
-* GitHub Name:
-* Group Name:
+* Class:  CSC-415-02 - Spring 2022
+* Names: Salaar Karimzadeh,
+         Brandon Cruz-Youll,
+         Brian Adams,
+         Jasmine Thind
+* Student IDs:920765141, 902899041, 921039987, 920767229
+* GitHub Name: BeeSeeWhy
+* Group Name: Zombies
 * Project: Basic File System
 *
 * File: fsShell.c
