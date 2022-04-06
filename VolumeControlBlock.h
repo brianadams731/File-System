@@ -11,9 +11,10 @@
 *
 * File: VolumeControlBlock.c
 *
-* Description: This header file includes the structure 
-of the volume control block and the fields it contains. It also includes the 
-function protocol to initalize the volume control block 
+* Description: This header file includes the structure of the volume control block. 
+* All interfaces in this header are implemented in VolumeControlBlock.c, and are consumed by
+* fsInit. The interface for the VolumeControlBlock struct is defined here,
+* as well as the interface for vcbInit.
 **************************************************************/
 
 #define VOLUME_SIZE 100000

@@ -43,7 +43,7 @@ void initFreeSpace()
         freeArray[i] = 'O';
     }
 
-    // 0 vcb, 5 fsm (verify #of blocks), 6 root [xxxxxx, ooooooooooooooooo....]
+    // 0 vcb, 1 root (verify #of blocks), 2 free space [xxx000000....]
     // Marks off the blocks for free space
     for (int i = 0; i < 3; i++) 
     {

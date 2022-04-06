@@ -11,8 +11,11 @@
 *
 * File: VolumeControlBlock.c
 *
-* Description: This file contains the implmentaion of the volume 
-control block initalization funtion and returns it to the user
+* Description: This file contains the implementation of the volume 
+* control block initialization. The VolumeControlBlock is initalized
+* with default values. The total blocks denotes the total blocks available
+* in the volume. The magic number is defaulted to 16 and is used for identification.
+* Finally the block size represents the size of each logical block in bytes.
 **************************************************************/
 
 #include "VolumeControlBlock.h"
