@@ -11,8 +11,14 @@
 *
 * File: Directory.c
 *
-* Description:
-* This file implements the functions for Directory
+* Description: This file provides the implementation for the initialization of the 
+* root directory. The root directory contains it's block location, and its parent block location 
+* (which is it self). The root directory also contains a magic number for identification, as well as 
+* an array of directory entries. These directory entries contain metadata about the files that the root
+* directory tracks. These directory entries contain the file id's, block location, size, author, date created etc.
+* The first two indexes represent the parent and self. Index 0 would represent .. (the parent), and index 1 would
+* represent . (self). Because this is the root index the parent and self both point the root (self). 
+* 
 **************************************************************/
 #include "Directory.h"
 #include <stdlib.h>
