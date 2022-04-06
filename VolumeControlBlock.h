@@ -27,6 +27,7 @@ typedef struct VolumeControlBlock{
     int rootDirectoryBlock;
     //int initialized;
     int freeBlockCount;
+    char name[10];
  
 } VolumeControlBlock;
 

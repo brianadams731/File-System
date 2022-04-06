@@ -25,6 +25,9 @@ VolumeControlBlock* vcbInit(int bSize,int totalB){
     vcb->totalBlocks = totalB;
     vcb->blockSize = bSize;
     vcb->magicNumber = 16;
+    strcpy(vcb->name, "vcb");
+    
+    
     return vcb;    
 }
 /*

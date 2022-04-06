@@ -31,7 +31,7 @@ fsDir* initRootDir(){
     int i = 0;
     for(i; i<sizeof(root->directryEntries)/sizeof(fsDirEntry);i++){
         if(i<2){
-        strcpy(root->directryEntries[i].filename, root->name);
+        strcpy(root->directryEntries[i].filename, "root Entry");
         root->directryEntries[i].entrySize = 1;
         root->directryEntries[i].isADir = 'T';
         root->directryEntries[i].fileBlockLocation = root->currentBlockLocation;
