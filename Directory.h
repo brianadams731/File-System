@@ -21,7 +21,7 @@
 #ifndef DIRECTORY_H
 #define DIRECTORY_H
 
-#define ROOT_DIR_LOCATION 42
+#define ROOT_DIR_LOCATION 1
 #define MAX_DIR_ENTRIES 10
 #define MAGIC_NUM_DIR 9
 #define DIR_SIZE 1
@@ -48,6 +48,9 @@ typedef struct DirectoryInfo {
 
 fsDir* initRootDir();
 fsDir* findDir(const char* name);
+fsDir* findDirFrom(fsDir* src, char* dirname);
+fsDir* fetchRootDir();
+fsDir* loadDirFromBlock(int blockLocation);
 
 
 

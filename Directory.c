@@ -22,6 +22,7 @@
 **************************************************************/
 #include "Directory.h"
 #include <stdlib.h>
+#include "fsLow.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -55,6 +56,27 @@ fsDir* initRootDir(){
 
 fsDir* findDir(const char* name){
 
+}
+
+fsDir* fetchRootDir(){
+    return loadDirFromBlock(ROOT_DIR_LOCATION);
+}
+
+fsDir* loadDirFromBlock(int blockLocation){
+    fsDir* dir = malloc(MINBLOCKSIZE * DIR_SIZE);
+    LBAread(dir, DIR_SIZE, blockLocation);
+    return dir;
+}
+
+fsDir* findDirFrom(fsDir* src, char* dirname){
+    int i = 0;
+    fsDir* dir = NULL;
+    for(i;i< MAX_DIR_ENTRIES;i++){
+        if(strcmp(src->directryEntries[i].filename, dirname) == 0){
+            return loadDirFromBlock(src->directryEntries[i].fileBlockLocation);
+        }
+    }
+    return dir;
 }
 
 // For debug only, used to make sure dir is being initalized correctly

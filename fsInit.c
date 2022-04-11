@@ -51,8 +51,8 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 		VolumeControlBlock* vcb = vcbInit(BLOCK_SIZE, floor(BLOCK_SIZE/VOLUME_SIZE));
 		fsDir* dir = initRootDir();
 		initFreeSpace();
-		LBAwrite(vcb,1,0);
-		LBAwrite(dir,1,1);
+		LBAwrite(vcb,1,VOLUME_LOCATION);
+		LBAwrite(dir,DIR_SIZE, ROOT_DIR_LOCATION);
 		}
 	return 0;
 	}
