@@ -38,7 +38,7 @@ fsDir* initRootDir(){
     int i = 0;
     for(i; i<sizeof(root->directryEntries)/sizeof(fsDirEntry);i++){
         if(i<2){
-        strcpy(root->directryEntries[i].filename, "root Entry");
+        strcpy(root->directryEntries[i].filename, i==0?".":"..");
         root->directryEntries[i].entrySize = 1;
         root->directryEntries[i].isADir = 'T';
         root->directryEntries[i].fileBlockLocation = root->currentBlockLocation;
@@ -54,9 +54,9 @@ fsDir* initRootDir(){
     return root;
 }
 
-fsDir* findDir(const char* name){
+/*fsDir* findDir(const char* name){
 
-}
+}*/
 
 fsDir* fetchRootDir(){
     return loadDirFromBlock(ROOT_DIR_LOCATION);
@@ -68,15 +68,15 @@ fsDir* loadDirFromBlock(int blockLocation){
     return dir;
 }
 
-fsDir* findDirFrom(fsDir* src, char* dirname){
+fsDirEntry* findDirEntry(fsDir* src, char* dirEntryName){
     int i = 0;
-    fsDir* dir = NULL;
+    fsDirEntry* dirEntry = NULL;
     for(i;i< MAX_DIR_ENTRIES;i++){
-        if(strcmp(src->directryEntries[i].filename, dirname) == 0){
-            return loadDirFromBlock(src->directryEntries[i].fileBlockLocation);
+        if(strcmp(src->directryEntries[i].filename, dirEntryName) == 0){
+            return &src->directryEntries[i];
         }
     }
-    return dir;
+    return dirEntry;
 }
 
 // For debug only, used to make sure dir is being initalized correctly

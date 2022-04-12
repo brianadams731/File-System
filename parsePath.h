@@ -1,9 +1,8 @@
 
-typedef struct FS_Path{
-    int exists;
+typedef struct fs_Path{
     char* currentPath;
-    int blockLocation;
-} FS_Path;
+    fsDirEntry* entry;
+} fs_Path;
 
-FS_Path*  parsePath(char* path);
-int freePath(FS_Path* fs_path); // 1 indicates path was deallocated correctly, 0 indicates error
+fs_Path*  parsePath(char* path);
+int freePath(fs_Path* fs_path); // 1 indicates path was deallocated correctly, 0 indicates error

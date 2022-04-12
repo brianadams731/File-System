@@ -6,19 +6,14 @@
 #include "parsePath.h"
 
 int fs_setcwd(char *buf){
-    FS_Path* path = parsePath(buf);
-
-    fsDir* rootDir = fetchRootDir();
-    fsDir* testGood = findDirFrom(rootDir, "root Entry");
-    fsDir* testBad = findDirFrom(rootDir, "not here");
+    fs_Path* path = parsePath(buf);
     
-    printf("%s\n",rootDir->name);
-    printf("%s\n",testGood->name);
-    if(!testBad){
-        printf("NULL\n");
+    if(path){
+        printf("%s\n",path->entry->filename);
+        printf("%d\n",path->entry->fileBlockLocation);
+    }else{
+        printf("Null\n");
     }
-    
-    free(rootDir);
     freePath(path);
     return 0;
 }

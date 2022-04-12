@@ -47,8 +47,8 @@ typedef struct DirectoryInfo {
 } fsDir;
 
 fsDir* initRootDir();
-fsDir* findDir(const char* name);
-fsDir* findDirFrom(fsDir* src, char* dirname);
+//fsDir* findDir(const char* name);
+fsDirEntry* findDirEntry(fsDir* src, char* dirname);
 fsDir* fetchRootDir();
 fsDir* loadDirFromBlock(int blockLocation);
 

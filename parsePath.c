@@ -1,19 +1,40 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "Directory.h"
 #include "parsePath.h"
 
-FS_Path * parsePath(char* path){
-    FS_Path* fsPath = malloc(sizeof(FS_Path));
-    fsPath->currentPath = malloc(strlen(path) + 1);
-    strcpy(fsPath->currentPath,path);
-    
+fs_Path * parsePath(char* path){
+    fs_Path* fsPath = NULL;
+    fsDir* rootDir = fetchRootDir();
+
+    char* token = strtok(path, "/");
+    fsDirEntry* traversedDir = findDirEntry(rootDir, token);
+    while(token && traversedDir){
+        token = strtok(NULL,"/");
+        if(token == NULL){
+            fsPath = malloc(sizeof(fs_Path));
+            fsPath->currentPath = malloc(sizeof(path));
+            strcpy(fsPath->currentPath, path);
+            fsPath->entry = traversedDir;
+            break;
+        }else if(traversedDir->isADir == 'T'){
+            fsDir* dir = loadDirFromBlock(traversedDir->fileBlockLocation);
+            traversedDir = findDirEntry(dir, token);
+            free(dir);
+        }else{
+            break;
+        }
+    }
+    free(rootDir);
     return fsPath;
 }
 
-int freePath(FS_Path* fs_path){
-    free(fs_path->currentPath);
-    free(fs_path);
-    return 1;
+int freePath(fs_Path* fsPath){
+    if(fsPath){
+        free(fsPath->currentPath);
+        free(fsPath);
+        return 1;
+    }
+    return 0;
 }
-
