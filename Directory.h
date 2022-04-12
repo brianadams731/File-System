@@ -48,8 +48,22 @@ typedef struct DirectoryInfo {
 
 fsDir* initRootDir();
 //fsDir* findDir(const char* name);
+
+/*
+* WARNING: Will return null if entry is not located in directory
+* @ owns: its return value, do not free the entry returned
+* @ param src: The directory this function will search in
+* @ param dirname: the string name of entry to find, this is case sensitive
+*/
 fsDirEntry* findDirEntry(fsDir* src, char* dirname);
 fsDir* fetchRootDir();
+
+/*
+* WARNING: Check that the block you reading holds a directory, this function will not check that 
+* what its reading is a dir, it will assume it is.
+*
+* @ owns: nothing, You are incharge of deallocating the memory used by the return
+*/
 fsDir* loadDirFromBlock(int blockLocation);
 
 
