@@ -4,7 +4,15 @@
 #include "Directory.h"
 #include "parsePath.h"
 
-fs_Path * parsePath(char* path){
+fs_Path * parsePath(char* originalPath){
+    char* path = malloc(sizeof(path));
+    if(originalPath[0] == '/'){
+        strcpy(path,&originalPath[1]);
+    }else{
+        strcpy(path, originalPath);
+    }
+
+    printf("In Path: %s\n", path);
     fs_Path* fsPath = NULL;
     fsDir* rootDir = fetchRootDir();
 
