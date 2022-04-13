@@ -54,14 +54,6 @@ int fs_setcwd(char *buf){
         // if not a dir return 1; Use parsePath and checkDir!
         addEntryToCurrentPath(buf);
     }
-
-    /*fs_Path* path = parsePath(currentPath);
-    if(parsePath){
-        printf("Parsed %s", path->entry->filename);
-    }
-    freePath(path);
-    */
-
     return 0;
 }
 
@@ -98,6 +90,7 @@ int fs_rmdir(const char *pathname){
 // ------------
 fdDir * fs_opendir(const char *name){
     //TODO: Should we use the name? or our current path, both seem identical
+    // WARNING: This is assuming that the current path points to a dir!
     fs_Path* path = parsePath(currentPath);
     fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
     
@@ -108,20 +101,26 @@ fdDir * fs_opendir(const char *name){
     memcpy(openDir->directryEntries, dir->directryEntries, sizeof(dir->directryEntries));
     strcpy(openDir->pathToDir, currentPath);
 
+
     freePath(path);
     free(dir);
     return openDir;
 }
 
-struct fs_diriteminfo *fs_readdir(fdDir *dirp){    
-    dirp->directryEntries[dirp->dirEntryPosition];
-    if(dirp->directryEntries[dirp->dirEntryPosition].fileBlockLocation == -1){
+struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+    // THIS ASSUMES THAT ENTERIES OF "" MARK THE END OF THE ENTRY ARRAY
+    if(strcmp(dirp->directryEntries[dirp->dirEntryPosition].filename,"")==0){
         return NULL;
     }
 
-    printf("%s",dirp->directryEntries[0].filename);
+    struct fs_diriteminfo* dirInfo = malloc(sizeof(struct fs_diriteminfo));
+    strcpy(dirInfo->d_name, dirp->directryEntries[dirp->dirEntryPosition].filename);
+    //TODO: Check file type char conventions
+    dirInfo->fileType = dirp->directryEntries[dirp->dirEntryPosition].isADir?'D':'F';
+    dirInfo->d_reclen = dirp->directryEntries[dirp->dirEntryPosition].entrySize;
+    
     dirp->dirEntryPosition = dirp->dirEntryPosition + 1;
-    return NULL;
+    return dirInfo;
 }
 
 int fs_closedir(fdDir *dirp){
