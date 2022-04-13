@@ -50,8 +50,16 @@ int fs_setcwd(char *buf){
     }else if(strcmp(buf,"..") == 0){
         popEntryFromCurrentPath();
     }else{
-        // TODO: Add checking to make sure buf is a dir once mkdir is added
-        // if not a dir return 1; Use parsePath and checkDir!
+        //Checking if buf is a valid directory
+        fs_Path* path = parsePath(currentDirectory);
+        fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
+        fsDirEntry* newDir = findDirEntry(dir, buf);
+        freePath(path);
+        free(dir);
+        if(newDir == NULL || newDir->isADir != 'T'){
+            return 1;
+        }
+        // If buf is valid, add to path
         addEntryToCurrentPath(buf);
     }
     return 0;
@@ -118,7 +126,7 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     //TODO: Check file type char conventions
     dirInfo->fileType = dirp->directryEntries[dirp->dirEntryPosition].isADir?'D':'F';
     dirInfo->d_reclen = dirp->directryEntries[dirp->dirEntryPosition].entrySize;
-    
+
     dirp->dirEntryPosition = dirp->dirEntryPosition + 1;
     return dirInfo;
 }
