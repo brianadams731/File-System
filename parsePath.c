@@ -11,11 +11,23 @@ fs_Path * parsePath(char* originalPath){
     }else{
         strcpy(path, originalPath);
     }
-
-    printf("In Path: %s\n", path);
     fs_Path* fsPath = NULL;
     fsDir* rootDir = fetchRootDir();
 
+    // if root
+    if(strcmp(path,"") == 0){
+        fsPath = malloc(sizeof(fs_Path));
+        fsPath->currentPath = malloc(sizeof(path));
+
+        fsDirEntry* traversedDir = findDirEntry(rootDir,".");
+        strcpy(fsPath->currentPath,"");
+        fsPath->entry = traversedDir;
+
+        free(rootDir);
+        return fsPath;
+    }
+
+    // not root
     char* token = strtok(path, "/");
     fsDirEntry* traversedDir = findDirEntry(rootDir, token);
     while(token && traversedDir){
@@ -23,6 +35,7 @@ fs_Path * parsePath(char* originalPath){
         if(token == NULL){
             fsPath = malloc(sizeof(fs_Path));
             fsPath->currentPath = malloc(sizeof(path));
+            
             strcpy(fsPath->currentPath, path);
             fsPath->entry = traversedDir;
             break;

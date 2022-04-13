@@ -7,7 +7,7 @@
 #include "parsePath.h"
 
 //TODO: Does these need to be longer?
-char currentPath[300];
+char currentPath[300] = "/";
 char currentDirectory[25];
 
 void addEntryToCurrentPath(char* entry){
@@ -50,8 +50,16 @@ int fs_setcwd(char *buf){
     }else if(strcmp(buf,"..") == 0){
         popEntryFromCurrentPath();
     }else{
-        // TODO: Add checking to make sure buf is a dir once mkdir is added
-        // if not a dir return 1; Use parsePath and checkDir!
+        //Checking if buf is a valid directory
+        fs_Path* path = parsePath(currentDirectory);
+        fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
+        fsDirEntry* newDir = findDirEntry(dir, buf);
+        freePath(path);
+        free(dir);
+        if(newDir == NULL || newDir->isADir != 'T'){
+            return 1;
+        }
+        // If buf is valid, add to path
         addEntryToCurrentPath(buf);
     }
     return 0;
@@ -89,13 +97,43 @@ int fs_rmdir(const char *pathname){
 }
 // ------------
 fdDir * fs_opendir(const char *name){
+    //TODO: Should we use the name? or our current path, both seem identical
+    // WARNING: This is assuming that the current path points to a dir!
+    fs_Path* path = parsePath(currentPath);
+    fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
+    
+    fdDir* openDir = malloc(sizeof(fdDir));
+    
+    openDir->directoryStartLocation = dir->currentBlockLocation;
+    openDir->dirEntryPosition = 0;
+    memcpy(openDir->directryEntries, dir->directryEntries, sizeof(dir->directryEntries));
+    strcpy(openDir->pathToDir, currentPath);
 
+
+    freePath(path);
+    free(dir);
+    return openDir;
 }
+
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+    // THIS ASSUMES THAT ENTERIES OF "" MARK THE END OF THE ENTRY ARRAY
+    if(strcmp(dirp->directryEntries[dirp->dirEntryPosition].filename,"")==0){
+        return NULL;
+    }
 
+    struct fs_diriteminfo* dirInfo = malloc(sizeof(struct fs_diriteminfo));
+    strcpy(dirInfo->d_name, dirp->directryEntries[dirp->dirEntryPosition].filename);
+    //TODO: Check file type char conventions
+    dirInfo->fileType = dirp->directryEntries[dirp->dirEntryPosition].isADir?'D':'F';
+    dirInfo->d_reclen = dirp->directryEntries[dirp->dirEntryPosition].entrySize;
+
+    dirp->dirEntryPosition = dirp->dirEntryPosition + 1;
+    return dirInfo;
 }
-int fs_closedir(fdDir *dirp){
 
+int fs_closedir(fdDir *dirp){
+    free(dirp);
+    return 0;
 }
 // -------------
 
