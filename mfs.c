@@ -114,8 +114,14 @@ fdDir * fs_opendir(const char *name){
 }
 
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){    
+    dirp->directryEntries[dirp->dirEntryPosition];
+    if(dirp->directryEntries[dirp->dirEntryPosition].fileBlockLocation == -1){
+        return NULL;
+    }
+
     printf("%s",dirp->directryEntries[0].filename);
-    
+    dirp->dirEntryPosition = dirp->dirEntryPosition + 1;
+    return NULL;
 }
 
 int fs_closedir(fdDir *dirp){
