@@ -123,7 +123,8 @@ fdDir * fs_opendir(const char *name){
     fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
     
     fdDir* openDir = malloc(sizeof(fdDir));
-    
+    openDir->dirInfo = malloc(sizeof(struct fs_diriteminfo));
+
     openDir->directoryStartLocation = dir->currentBlockLocation;
     openDir->dirEntryPosition = 0;
     memcpy(openDir->directryEntries, dir->directryEntries, sizeof(dir->directryEntries));
@@ -140,18 +141,17 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     if(strcmp(dirp->directryEntries[dirp->dirEntryPosition].filename,"")==0){
         return NULL;
     }
-
-    struct fs_diriteminfo* dirInfo = malloc(sizeof(struct fs_diriteminfo));
-    strcpy(dirInfo->d_name, dirp->directryEntries[dirp->dirEntryPosition].filename);
+    strcpy(dirp->dirInfo->d_name, dirp->directryEntries[dirp->dirEntryPosition].filename);
     //TODO: Check file type char conventions
-    dirInfo->fileType = dirp->directryEntries[dirp->dirEntryPosition].isADir?'D':'F';
-    dirInfo->d_reclen = dirp->directryEntries[dirp->dirEntryPosition].entrySize;
+    dirp->dirInfo->fileType = dirp->directryEntries[dirp->dirEntryPosition].isADir?FT_DIRECTORY:FT_REGFILE;
+    dirp->dirInfo->d_reclen = sizeof(struct fs_diriteminfo);
 
     dirp->dirEntryPosition = dirp->dirEntryPosition + 1;
-    return dirInfo;
+    return dirp->dirInfo;
 }
 
 int fs_closedir(fdDir *dirp){
+    free(dirp->dirInfo);
     free(dirp);
     return 0;
 }
