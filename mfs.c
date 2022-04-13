@@ -7,7 +7,7 @@
 #include "parsePath.h"
 
 //TODO: Does these need to be longer?
-char currentPath[300];
+char currentPath[300] = "/";
 char currentDirectory[25];
 
 void addEntryToCurrentPath(char* entry){
@@ -54,6 +54,14 @@ int fs_setcwd(char *buf){
         // if not a dir return 1; Use parsePath and checkDir!
         addEntryToCurrentPath(buf);
     }
+
+    /*fs_Path* path = parsePath(currentPath);
+    if(parsePath){
+        printf("Parsed %s", path->entry->filename);
+    }
+    freePath(path);
+    */
+
     return 0;
 }
 
@@ -89,13 +97,30 @@ int fs_rmdir(const char *pathname){
 }
 // ------------
 fdDir * fs_opendir(const char *name){
+    //TODO: Should we use the name? or our current path, both seem identical
+    fs_Path* path = parsePath(currentPath);
+    fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
+    
+    fdDir* openDir = malloc(sizeof(fdDir));
+    
+    openDir->directoryStartLocation = dir->currentBlockLocation;
+    openDir->dirEntryPosition = 0;
+    memcpy(openDir->directryEntries, dir->directryEntries, sizeof(dir->directryEntries));
+    strcpy(openDir->pathToDir, currentPath);
 
+    freePath(path);
+    free(dir);
+    return openDir;
 }
-struct fs_diriteminfo *fs_readdir(fdDir *dirp){
 
+struct fs_diriteminfo *fs_readdir(fdDir *dirp){    
+    printf("%s",dirp->directryEntries[0].filename);
+    
 }
+
 int fs_closedir(fdDir *dirp){
-
+    free(dirp);
+    return 0;
 }
 // -------------
 

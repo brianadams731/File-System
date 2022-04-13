@@ -21,6 +21,8 @@
 #include "b_io.h"
 
 #include <dirent.h>
+
+#include "Directory.h"
 #define FT_REGFILE	DT_REG
 #define FT_DIRECTORY DT_DIR
 #define FT_LINK	DT_LNK
@@ -48,6 +50,8 @@ struct fs_diriteminfo
 // calls the function readdir, you give the next entry in the directory
 typedef struct
 	{
+	char pathToDir[300];
+	fsDirEntry directryEntries[MAX_DIR_ENTRIES];
 	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
 	unsigned short  d_reclen;		/*length of this record */
 	unsigned short	dirEntryPosition;	/*which directory entry position, like file pos */
