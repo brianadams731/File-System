@@ -55,3 +55,17 @@ void initFreeSpace()
     int retValue = LBAwrite( &freeArray,FREE_ARRAY_SIZE, FREE_ARRAY_LOCATION);
     
 }
+
+
+
+void markFree(int location){
+
+    char* freeUp = malloc(FREE_ARRAY_SIZE*BLOCK_SIZE);
+
+    LBAread(freeUp,FREE_ARRAY_SIZE,FREE_ARRAY_LOCATION);
+    freeUp[location] = 'O';
+
+    LBAwrite(freeUp,FREE_ARRAY_SIZE,FREE_ARRAY_LOCATION);
+    free(freeUp);
+
+}
