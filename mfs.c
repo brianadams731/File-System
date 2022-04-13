@@ -18,6 +18,17 @@ void addEntryToCurrentPath(char* entry){
     strcpy(currentDirectory, entry);
 }
 
+void addCurrentDirFromPath(){
+    int indexOfLastSlash = strlen(currentPath);
+    for(indexOfLastSlash; indexOfLastSlash > 0; indexOfLastSlash--){
+        if(currentPath[indexOfLastSlash] == '/'){
+            break;
+        }
+    }
+    indexOfLastSlash++;
+    strcpy(currentDirectory,&currentPath[indexOfLastSlash]);
+}
+
 void popEntryFromCurrentPath(){
     int lengthOfPath = strlen(currentPath);
     int lengthOfDir = strlen(currentDirectory);
@@ -31,14 +42,7 @@ void popEntryFromCurrentPath(){
         currentPath[lengthOfNewPath] = '\0';
         //------
         // setting currentDir
-        int indexOfLastSlash = strlen(currentPath);
-        for(indexOfLastSlash; indexOfLastSlash > 0; indexOfLastSlash--){
-            if(currentPath[indexOfLastSlash] == '/'){
-                break;
-            }
-        }
-        indexOfLastSlash++;
-        strcpy(currentDirectory,&currentPath[indexOfLastSlash]);
+        addCurrentDirFromPath();
     }else{
         strcpy(currentPath,"/");
         strcpy(currentDirectory,"");
@@ -49,9 +53,19 @@ int fs_setcwd(char *buf){
     if(strcmp(buf,".") == 0){
     }else if(strcmp(buf,"..") == 0){
         popEntryFromCurrentPath();
+    }else if(buf[0] == '/'){
+        fs_Path* path = parsePath(buf);
+        if(path){
+            printf("Works: %s\n",path->entry->filename);
+        }
+        if(!path || path->entry->isADir != 'T'){
+            return 1;
+        }
+        strcpy(currentPath, buf);
+        addCurrentDirFromPath();
     }else{
         //Checking if buf is a valid directory
-        fs_Path* path = parsePath(currentDirectory);
+        fs_Path* path = parsePath(currentPath);
         fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
         fsDirEntry* newDir = findDirEntry(dir, buf);
         freePath(path);
@@ -66,7 +80,13 @@ int fs_setcwd(char *buf){
 }
 
 char * fs_getcwd(char *buf, size_t size){
-    return currentPath;
+    if(size >= strlen(currentPath)){
+        strcpy(buf, currentPath);
+    }else{
+        strncpy(buf, currentPath, size - 1);
+        buf[size] = '\0';
+    }
+    return buf;
 }
 
 int fs_isDir(char * path){
@@ -103,7 +123,8 @@ fdDir * fs_opendir(const char *name){
     fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
     
     fdDir* openDir = malloc(sizeof(fdDir));
-    
+    openDir->dirInfo = malloc(sizeof(struct fs_diriteminfo));
+
     openDir->directoryStartLocation = dir->currentBlockLocation;
     openDir->dirEntryPosition = 0;
     memcpy(openDir->directryEntries, dir->directryEntries, sizeof(dir->directryEntries));
@@ -120,18 +141,17 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     if(strcmp(dirp->directryEntries[dirp->dirEntryPosition].filename,"")==0){
         return NULL;
     }
-
-    struct fs_diriteminfo* dirInfo = malloc(sizeof(struct fs_diriteminfo));
-    strcpy(dirInfo->d_name, dirp->directryEntries[dirp->dirEntryPosition].filename);
+    strcpy(dirp->dirInfo->d_name, dirp->directryEntries[dirp->dirEntryPosition].filename);
     //TODO: Check file type char conventions
-    dirInfo->fileType = dirp->directryEntries[dirp->dirEntryPosition].isADir?'D':'F';
-    dirInfo->d_reclen = dirp->directryEntries[dirp->dirEntryPosition].entrySize;
+    dirp->dirInfo->fileType = dirp->directryEntries[dirp->dirEntryPosition].isADir?FT_DIRECTORY:FT_REGFILE;
+    dirp->dirInfo->d_reclen = sizeof(struct fs_diriteminfo);
 
     dirp->dirEntryPosition = dirp->dirEntryPosition + 1;
-    return dirInfo;
+    return dirp->dirInfo;
 }
 
 int fs_closedir(fdDir *dirp){
+    free(dirp->dirInfo);
     free(dirp);
     return 0;
 }

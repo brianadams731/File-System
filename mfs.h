@@ -50,6 +50,7 @@ struct fs_diriteminfo
 // calls the function readdir, you give the next entry in the directory
 typedef struct
 	{
+	struct fs_diriteminfo* dirInfo;
 	char pathToDir[300];
 	fsDirEntry directryEntries[MAX_DIR_ENTRIES];
 	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
