@@ -42,14 +42,16 @@ typedef char FsArray[(VOLUME_SIZE/BLOCK_SIZE)];
 
 static int initializeFreeSpace = 0;
 
-typedef struct LBARange {
+typedef struct mapLocation {
     int start;
     int end;
 } FileScope;
 
 void initFreeSpace();
 
-FileScope findFreeSpace(int blockSize);
+FileScope findFree(int blockAmount);
+
+void markFree(int location);
 
 
 

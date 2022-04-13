@@ -56,7 +56,63 @@ void initFreeSpace()
     
 }
 
+/*******************************************************
+* FileScope findFree(int blockAmount)
+* - This function will allocate and find a free
+* set of blocks. It will check for the amount of blocks
+* needed by a user and search the free space array
+* to write to the file.
+*******************************************************/
+FileScope findFree(int blockAmount) 
+{
 
+    int counter = 0;
+
+    //Read the free space map into buffer
+    char* buffer = malloc(BLOCK_SIZE*FREE_ARRAY_SIZE);
+    LBAread(buffer, 39, 1);
+    FileScope bitMap;
+
+    //search for the set of available blocks.
+    //Checks for if the user needs a block or more than one block
+    for(int i = 0; i < VOLUME_SIZE/BLOCK_SIZE; i++) 
+    {
+        //single block
+        if(buffer[i] == 'O' && blockAmount == 1) 
+        {
+
+            bitMap.start = i;
+            bitMap.end = i;
+            buffer[i] = 'X';
+            break;
+        }
+        ///multiple blocks
+        if(buffer[i] == 'O' && blockAmount > 1) 
+        {
+            counter++;
+            if(counter == blockAmount) 
+            {
+
+                bitMap.start = i - blockAmount;
+                bitMap.end = i;
+                for(int j = bitMap.start; j < bitMap.end; j++) 
+                {
+                    buffer[j] = 'X';
+
+                }
+                break;
+
+            }
+
+        }
+
+    }
+
+    LBAwrite(buffer,39, 1); //write to our free space
+    free(buffer); //free memory allocated
+
+    return bitMap;
+}
 
 void markFree(int location){
 
