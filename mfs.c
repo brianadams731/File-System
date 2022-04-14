@@ -153,16 +153,16 @@ int fs_mkdir(const char *pathname, mode_t mode){
         printf("There are no free entries\n");
         return 1;
     }
-    //FileScope freeBlock = findFree(DIR_SIZE);
-    //printf("FREE BLOCK %d\n", freeBlock.start);
-
-    // TODO: Check if block is actually free!
-    fsDir* newDir = makeDir(dirName, ((strlen(dirName)* 2) + 500), dir->directryEntries[0]);
+    freeData freeBlock = getFreeSpace(DIR_SIZE);
+    if(freeBlock.end == 0){
+        printf("Error: Insufficent Free Space");
+        return 1;
+    }
+    fsDir* newDir = makeDir(dirName, freeBlock.start, dir->directryEntries[0]);
     addDirEntryFromDir(dir, newDir, freeEntryIndex);
     LBAwrite(dir,DIR_SIZE, dir->currentBlockLocation);
     LBAwrite(newDir,DIR_SIZE,newDir->currentBlockLocation);
-    printf("CURRENT BLOCK PARENT IS WRITTEN TO: %d\n", dir->currentBlockLocation);
-    // TODO: Mark freespace as being taken at newDir->currentBlockLocation;
+    markUsedSpace(freeBlock);
     free(newDir);
     return 0;
 }

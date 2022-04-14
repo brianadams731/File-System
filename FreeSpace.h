@@ -37,6 +37,10 @@
 #define FREE_ARRAY_LOCATION 3
 #endif
 
+#ifndef FREE_BLOCK_CONSUMPTION
+#define FREE_BLOCK_CONSUMPTION (FREE_ARRAY_SIZE/BLOCK_SIZE)
+#endif
+
 
 typedef char FsArray[FREE_ARRAY_SIZE];
 
@@ -57,10 +61,10 @@ typedef struct freeData{
     long freeBlockCount;
 } freeData;
 
-/*
+
 void markFree(int location);
 void markUsedSpace(freeData file);
 freeData getFreeSpace(int blockAmount);
-*/
+
 
 #endif
