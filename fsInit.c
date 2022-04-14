@@ -40,9 +40,6 @@ int initFileSystem (uint64_t numberOfBlocks, uint64_t blockSize)
 	{
 	printf ("Initializing File System with %ld blocks with a block size of %ld\n", numberOfBlocks, blockSize);
 	/* TODO: Add any code you need to initialize your file system. */
-
-
-	
 	VolumeControlBlock* vcb = malloc(BLOCK_SIZE);
 	LBAread(vcb, 1, 0);
 

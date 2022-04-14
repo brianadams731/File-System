@@ -153,15 +153,15 @@ int fs_mkdir(const char *pathname, mode_t mode){
         printf("There are no free entries\n");
         return 1;
     }
-    FileScope freeBlock = findFree(1);
-    printf("FREE BLOCK %d\n", freeBlock.start);
+    //FileScope freeBlock = findFree(DIR_SIZE);
+    //printf("FREE BLOCK %d\n", freeBlock.start);
 
     // TODO: Check if block is actually free!
-    fsDir* newDir = makeDir(dirName, freeBlock.start, dir->directryEntries[0]);
+    fsDir* newDir = makeDir(dirName, ((strlen(dirName)* 2) + 500), dir->directryEntries[0]);
     addDirEntryFromDir(dir, newDir, freeEntryIndex);
     LBAwrite(dir,DIR_SIZE, dir->currentBlockLocation);
     LBAwrite(newDir,DIR_SIZE,newDir->currentBlockLocation);
-
+    printf("CURRENT BLOCK PARENT IS WRITTEN TO: %d\n", dir->currentBlockLocation);
     // TODO: Mark freespace as being taken at newDir->currentBlockLocation;
     free(newDir);
     return 0;
@@ -192,6 +192,9 @@ fdDir * fs_opendir(const char *name){
 
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     // THIS ASSUMES THAT ENTERIES OF "" MARK THE END OF THE ENTRY ARRAY
+    if(dirp->dirEntryPosition > MAX_DIR_ENTRIES){
+        return NULL;
+    }
     if(strcmp(dirp->directryEntries[dirp->dirEntryPosition].filename,"")==0){
         return NULL;
     }

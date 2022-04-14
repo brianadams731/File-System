@@ -24,7 +24,7 @@
 #define ROOT_DIR_LOCATION 1
 #define MAX_DIR_ENTRIES 10
 #define MAGIC_NUM_DIR 9
-#define DIR_SIZE 1
+#define DIR_SIZE 2
 
 typedef struct fsDirEntry {
     int id;                     // file id 

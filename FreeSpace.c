@@ -20,6 +20,7 @@
 
 #include "fsLow.h"
 #include "FreeSpace.h"
+#include "Directory.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -39,20 +40,21 @@ void initFreeSpace()
     FsArray *freeArrayptr;
 
     // Marks off the space that is free
-    for (int i = 0; i < (VOLUME_SIZE / BLOCK_SIZE); i++) 
+    for (int i = 0; i < FREE_ARRAY_SIZE; i++) 
     {
         freeArray[i] = 'O';
     }
 
     // 0 vcb, 1 root (verify #of blocks), 2 free space [xxx000000....]
     // Marks off the blocks for free space
-    for (int i = 0; i < 3; i++) 
+    for (int i = 0; i < 1 + DIR_SIZE + (FREE_ARRAY_SIZE/BLOCK_SIZE); i++) 
+                    //vcb   //dir     //temp freespace
     {
         freeArray[i] = 'X';
     }
 
 
-    int retValue = LBAwrite( &freeArray,FREE_ARRAY_SIZE, FREE_ARRAY_LOCATION);
+    int retValue = LBAwrite( &freeArray,(FREE_ARRAY_SIZE/BLOCK_SIZE), FREE_ARRAY_LOCATION);
     
 }
 

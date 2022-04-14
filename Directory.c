@@ -26,20 +26,18 @@
 #include <stdio.h>
 #include <string.h>
 
-// TODO: Add correct root location
-#define rootLocation 1;
 
 fsDir* initRootDir(){
     fsDir* root = malloc(sizeof(fsDir));
     strcpy(root->name, "root");
-    root->currentBlockLocation = rootLocation;
-    root->parentBlockLocation =  rootLocation;
+    root->currentBlockLocation = ROOT_DIR_LOCATION;
+    root->parentBlockLocation =  ROOT_DIR_LOCATION;
 
     int i = 0;
     for(i; i<sizeof(root->directryEntries)/sizeof(fsDirEntry);i++){
         if(i<2){
         strcpy(root->directryEntries[i].filename, i==0?".":"..");
-        root->directryEntries[i].entrySize = 1;
+        root->directryEntries[i].entrySize = DIR_SIZE;
         root->directryEntries[i].isADir = 'T';
         root->directryEntries[i].fileBlockLocation = root->currentBlockLocation;
         strcpy(root->directryEntries[i].author, "OS");
@@ -64,13 +62,13 @@ fsDir* makeDir(const char* name, int blockLocation, fsDirEntry parentDirEntry ){
     for(i; i<sizeof(dir->directryEntries)/sizeof(fsDirEntry);i++){
         if(i==0){
             strcpy(dir->directryEntries[i].filename,".");
-            dir->directryEntries[i].entrySize = 1;
+            dir->directryEntries[i].entrySize = DIR_SIZE;
             dir->directryEntries[i].isADir = 'T';
             dir->directryEntries[i].fileBlockLocation = dir->currentBlockLocation;
             strcpy(dir->directryEntries[i].author, "USER");
         }else if(i==1){
             strcpy(dir->directryEntries[i].filename, "..");
-            dir->directryEntries[i].entrySize = 1;
+            dir->directryEntries[i].entrySize = DIR_SIZE;
             dir->directryEntries[i].isADir = 'T';
             dir->directryEntries[i].fileBlockLocation = parentDirEntry.fileBlockLocation;
             strcpy(dir->directryEntries[i].author, "USER");

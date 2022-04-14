@@ -30,15 +30,15 @@
 #endif
 
 #ifndef FREE_ARRAY_SIZE
-#define FREE_ARRAY_SIZE 39
+#define FREE_ARRAY_SIZE (VOLUME_SIZE/BLOCK_SIZE)
 #endif
 
 #ifndef FREE_ARRAY_LOCATION
-#define FREE_ARRAY_LOCATION 2
+#define FREE_ARRAY_LOCATION 3
 #endif
 
 
-typedef char FsArray[(VOLUME_SIZE/BLOCK_SIZE)];
+typedef char FsArray[FREE_ARRAY_SIZE];
 
 static int initializeFreeSpace = 0;
 
@@ -51,8 +51,16 @@ void initFreeSpace();
 
 FileScope findFree(int blockAmount);
 
+typedef struct freeData{
+    int start;
+    int end;
+    long freeBlockCount;
+} freeData;
+
+/*
 void markFree(int location);
-
-
+void markUsedSpace(freeData file);
+freeData getFreeSpace(int blockAmount);
+*/
 
 #endif
