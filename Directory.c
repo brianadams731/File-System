@@ -113,6 +113,43 @@ fsDirEntry* findDirEntry(fsDir* src, char* dirEntryName){
     return dirEntry;
 }
 
+int rmDirEntry(fsDir* src, char* dirname){
+    int i = 0;
+    int found = 0;
+    fsDirEntry* dirEntry = NULL;
+    /*
+    printf("SOURCE BLOCK: %d\n", src->currentBlockLocation);
+    printf("SOURCE NAME: %s\n", src->name);
+    */
+    for(i;i< MAX_DIR_ENTRIES;i++){
+        if(strcmp(src->directryEntries[i].filename, dirname) == 0){
+            found = 1;
+            dirEntry = &src->directryEntries[i];
+            break;
+        }
+    }
+    if(found){
+        // MOVES EVERY ENTRY DOWN ONE, THEN DELETES THE LAST RECORD
+        if(i != MAX_DIR_ENTRIES - 1){
+            i++;
+            for(i;i<MAX_DIR_ENTRIES;i++){
+                src->directryEntries[i-1] = src->directryEntries[i];
+            } 
+            i--;
+        }
+
+        strcpy(src->directryEntries[i].filename,"");
+        strcpy(src->directryEntries[i].author, "");
+        strcpy(src->directryEntries[i].dateCreated, "");
+        strcpy(src->directryEntries[i].permissions, "");
+        src->directryEntries[i].id = -1;
+        src->directryEntries[i].entrySize = 0;
+        src->directryEntries[i].fileBlockLocation = 0;
+        src->directryEntries[i].isADir = 'F';
+        return 1;
+    }
+    return 0;
+}
 // For debug only, used to make sure dir is being initalized correctly
 /*
 int main(){

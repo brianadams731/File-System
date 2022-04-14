@@ -66,11 +66,19 @@ void addDirEntryFromDir(fsDir* targetDir, fsDir* sourceDir, int targetIndex);
 
 /*
 * WARNING: Will return null if entry is not located in directory
-* @ owns: its return value, do not free the entry returned
+* @ owns: its return value, do not free the entry returned, its memory is derived from source!
 * @ param src: The directory this function will search in
 * @ param dirname: the string name of entry to find, this is case sensitive
 */
 fsDirEntry* findDirEntry(fsDir* src, char* dirname);
+
+/*
+* WARNING: THIS ONLY REMOVES IT FROM MEMORY, YOU WILL NEED TO OVERWRITE THE PARENT BLOCK
+* @ owns: void
+* @ param src: The directory this function will search in
+* @ param dirname: the string name of entry to find, this is case sensitive
+*/
+int rmDirEntry(fsDir* src, char* dirname);
 fsDir* fetchRootDir();
 
 /*

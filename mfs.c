@@ -89,9 +89,21 @@ char * fs_getcwd(char *buf, size_t size){
 
 int fs_isDir(char * path){
     int isDir = 0;
-    fs_Path* fileEntry = parsePath(path);
+    char usePath[300];
+    if(path[0] != '/'){
+
+        strcpy(usePath, currentPath);
+        if(strcmp(usePath, "/") != 0){
+            strcpy(&usePath[strlen(currentPath)],"/");
+        }
+        strcpy(&usePath[strlen(usePath)],path);
+    }else{
+        strcpy(usePath,path);
+    }
+
+    fs_Path* fileEntry = parsePath(usePath);
     if(fileEntry){
-        isDir = fileEntry->entry->isADir;
+        isDir = (fileEntry->entry->isADir == 'T');
     }
     freePath(fileEntry);
     return isDir;
@@ -99,9 +111,21 @@ int fs_isDir(char * path){
 
 int fs_isFile(char * path){
     int isFile = 0;
-    fs_Path* fileEntry = parsePath(path);
+    char usePath[300];
+
+    if(path[0] != '/'){
+        strcpy(usePath, currentPath);
+        if(strcmp(usePath, "/") != 0){
+            strcpy(&usePath[strlen(currentPath)],"/");
+        }
+        strcpy(&usePath[strlen(usePath)],path);
+    }else{
+        strcpy(usePath,path);
+    }
+
+    fs_Path* fileEntry = parsePath(usePath);
     if(fileEntry){
-        isFile = (fileEntry->entry->isADir == 0);
+        isFile = (fileEntry->entry->isADir == 'F');
     }
     freePath(fileEntry);
     return isFile;
@@ -168,7 +192,56 @@ int fs_mkdir(const char *pathname, mode_t mode){
     return 0;
 }
 int fs_rmdir(const char *pathname){
+    // THIS HAS ALREADY CHECKED IF PATH EXISTS AND IS A DIR
+    char pathToParent[300];
+    char dirName[25];
+    if(pathname[0] == '/'){
+        parentPath* parentData = getParentPath(pathname);
+        if(strcmp(parentData->name,"") == 0){
+            printf("Error: Invalid name\n");
+            return 1;
+        }
+        strcpy(pathToParent, parentData->path);
+        strcpy(dirName, parentData->name);
+    }else{
+        strcpy(pathToParent, currentPath);
+        strcpy(dirName, pathname);
+    }
 
+    fs_Path* parentDirEntry = malloc(sizeof(fs_Path));
+    parentDirEntry = parsePath(pathToParent);
+
+    fsDir* parentDir = malloc(sizeof(fsDir));
+    parentDir = loadDirFromBlock(parentDirEntry->entry->fileBlockLocation);
+
+    fsDirEntry* dirEntryToDelete = malloc(sizeof(fsDirEntry));
+    dirEntryToDelete = findDirEntry(parentDir, dirName);
+
+    if(!dirEntryToDelete){
+        printf("ERROR: Dir entry cannot be located\n");
+        return 1;
+    }
+
+    int deleteBlockLoc = dirEntryToDelete->fileBlockLocation;
+    int deleteBlockSize = dirEntryToDelete->entrySize;
+
+    int didDelete = rmDirEntry(parentDir, dirEntryToDelete->filename);
+    if(didDelete){
+        LBAwrite(parentDir, DIR_SIZE, parentDir->currentBlockLocation);
+        markFreeSpace(deleteBlockLoc, deleteBlockSize);
+    }else{
+        printf("Error: Failed to delete");
+    }
+
+    freePath(parentDirEntry);
+    free(parentDir);
+
+    // TODO: Is 0 success?
+    return didDelete?0:1;
+}
+int fs_delete(char* filename){
+    printf("IN FILE\n");
+    // THIS HAS ALREADY CHECKED IF PATH EXISTS AND IS FILE
 }
 // ------------
 fdDir * fs_opendir(const char *name){
@@ -215,10 +288,6 @@ int fs_closedir(fdDir *dirp){
 }
 // -------------
 
-
-int fs_delete(char* filename){
-
-}
 // -------------
 int fs_stat(const char *path, struct fs_stat *buf){
 
