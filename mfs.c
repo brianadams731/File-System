@@ -5,6 +5,7 @@
 #include "fsLow.h"
 #include "mfs.h"
 #include "parsePath.h"
+#include "FreeSpace.h"
 
 //TODO: Does these need to be longer?
 char currentPath[300] = "/";
@@ -110,7 +111,39 @@ int fs_isFile(char * path){
 }
 
 int fs_mkdir(const char *pathname, mode_t mode){
+    char* pathFromArg = malloc(sizeof(pathname));
+    if(pathname[0] == '/'){
+        // absolute
+    }else{
+        if(strcmp(pathname," ")==0){
+            printf("Error: Dir must have a name\n");
+            return 1;
+        }
+        fs_Path* path = parsePath(currentPath);
+        fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
+        int freeEntryIndex = -1;
+        int i = 0;
+        for(i;i<MAX_DIR_ENTRIES;i++){
+            if(strcmp(dir->directryEntries[i].filename,"")==0){
+                freeEntryIndex = i;
+                break;
+            }
+        }
+        if(freeEntryIndex == -1){
+            printf("There are no free entries\n");
+            return 1;
+        }
+        FileScope freeBlock = findFree(1);
+        // TODO: Check if block is actually free
+        fsDir* newDir = makeDir(pathname, freeBlock.start, dir->directryEntries[0]);
+        addDirEntryFromDir(dir, newDir, freeEntryIndex);
 
+        LBAwrite(dir,DIR_SIZE, dir->currentBlockLocation);
+        LBAwrite(newDir,DIR_SIZE,newDir->currentBlockLocation);
+        // TODO: Mark freespace as being taken at newDir->currentBlockLocation;
+        free(newDir);
+    }
+    return 1;
 }
 int fs_rmdir(const char *pathname){
 

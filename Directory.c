@@ -54,6 +54,42 @@ fsDir* initRootDir(){
     return root;
 }
 
+fsDir* makeDir(const char* name, int blockLocation, fsDirEntry parentDirEntry ){
+    fsDir* dir = malloc(sizeof(fsDir));
+    strcpy(dir->name, name);
+    dir->currentBlockLocation = blockLocation;
+    dir->parentBlockLocation =  parentDirEntry.fileBlockLocation;
+
+    int i = 0;
+    for(i; i<sizeof(dir->directryEntries)/sizeof(fsDirEntry);i++){
+        if(i==0){
+            strcpy(dir->directryEntries[i].filename,".");
+            dir->directryEntries[i].entrySize = 1;
+            dir->directryEntries[i].isADir = 'T';
+            dir->directryEntries[i].fileBlockLocation = dir->currentBlockLocation;
+            strcpy(dir->directryEntries[i].author, "USER");
+        }else if(i==1){
+            strcpy(dir->directryEntries[i].filename, "..");
+            dir->directryEntries[i].entrySize = 1;
+            dir->directryEntries[i].isADir = 'T';
+            dir->directryEntries[i].fileBlockLocation = parentDirEntry.fileBlockLocation;
+            strcpy(dir->directryEntries[i].author, "USER");
+        }else{
+            strcpy(dir->directryEntries[i].filename, "");
+            dir->directryEntries[i].id = -1;
+        }
+    }
+    return dir;
+}
+
+void addDirEntryFromDir(fsDir* targetDir, fsDir* sourceDir, int targetIndex){
+    strcpy(targetDir->directryEntries[targetIndex].filename, sourceDir->name);
+    targetDir->directryEntries[targetIndex].entrySize = sourceDir->directryEntries[0].entrySize;
+    targetDir->directryEntries[targetIndex].isADir = sourceDir->directryEntries[0].isADir;
+    targetDir->directryEntries[targetIndex].fileBlockLocation = sourceDir->currentBlockLocation;
+    strcpy(targetDir->directryEntries[targetIndex].author, sourceDir->directryEntries[0].author);
+}
+
 /*fsDir* findDir(const char* name){
 
 }*/
