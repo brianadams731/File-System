@@ -59,3 +59,23 @@ int freePath(fs_Path* fsPath){
     }
     return 0;
 }
+
+/*
+* @ owns: nothing, you will need to deallocate the memory returned
+* @ params path: full path you want the parent of ie. /dirOne/dirTwo
+*/
+parentPath* getParentPath(const char* path){
+    parentPath* retPath = malloc(sizeof(parentPath));
+
+    int indexOfLastSlash = strlen(path);
+    for(indexOfLastSlash; indexOfLastSlash > 0; indexOfLastSlash--){
+        if(path[indexOfLastSlash] == '/'){
+            break;
+        }
+    }
+    indexOfLastSlash++;
+    strcpy(retPath->name,&path[indexOfLastSlash]);
+    strncpy(retPath->path, path, indexOfLastSlash - 1);
+    retPath->path[indexOfLastSlash-1] = '\0';
+    return retPath;
+}

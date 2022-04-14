@@ -4,6 +4,10 @@ typedef struct fs_Path{
     fsDirEntry* entry;
 } fs_Path;
 
+typedef struct parentPath{
+    char path[300];
+    char name[25];
+} parentPath;
 /*
 * WARNING: Use freePath when deallocating this!
 * WARNING: If path is not viable (either the file does not exist or invalid path) this will return null
@@ -12,5 +16,6 @@ typedef struct fs_Path{
 * @ returns fsPath: this struct contains the path to the resource, as well as the dirEntry of the resource
 * use the appropriate loader to load the resource
 */
+parentPath* getParentPath(const char* path);
 fs_Path*  parsePath(char* path);
 int freePath(fs_Path* fs_path); // 1 indicates path was deallocated correctly, 0 indicates error

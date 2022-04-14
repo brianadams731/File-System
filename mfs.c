@@ -56,9 +56,6 @@ int fs_setcwd(char *buf){
         popEntryFromCurrentPath();
     }else if(buf[0] == '/'){
         fs_Path* path = parsePath(buf);
-        if(path){
-            printf("Works: %s\n",path->entry->filename);
-        }
         if(!path || path->entry->isADir != 'T'){
             return 1;
         }
@@ -112,37 +109,61 @@ int fs_isFile(char * path){
 
 int fs_mkdir(const char *pathname, mode_t mode){
     if(strcmp(pathname," ")==0){
-            printf("Error: Dir must have a name\n");
-            return 1;
+        printf("Error: Dir must have a name\n");
+        return 1;
     }
+    char pathToParent[300];
+    char dirName[25];
 
     if(pathname[0] == '/'){
-        // absolute
-    }else{
-        fs_Path* path = parsePath(currentPath);
-        fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
-        int freeEntryIndex = -1;
-        int i = 0;
-        for(i;i<MAX_DIR_ENTRIES;i++){
-            if(strcmp(dir->directryEntries[i].filename,"")==0){
-                freeEntryIndex = i;
-                break;
-            }
-        }
-        if(freeEntryIndex == -1){
-            printf("There are no free entries\n");
+        parentPath* parentData = getParentPath(pathname);
+        if(strcmp(parentData->name,"") == 0){
+            printf("Error: Invalid name\n");
             return 1;
         }
-        FileScope freeBlock = findFree(1);
-        // TODO: Check if block is actually free
-        fsDir* newDir = makeDir(pathname, freeBlock.start, dir->directryEntries[0]);
-        addDirEntryFromDir(dir, newDir, freeEntryIndex);
-
-        LBAwrite(dir,DIR_SIZE, dir->currentBlockLocation);
-        LBAwrite(newDir,DIR_SIZE,newDir->currentBlockLocation);
-        // TODO: Mark freespace as being taken at newDir->currentBlockLocation;
-        free(newDir);
+        strcpy(pathToParent, parentData->path);
+        strcpy(dirName, parentData->name);
+    }else{
+        strcpy(pathToParent, currentPath);
+        strcpy(dirName, pathname);
     }
+    fs_Path* path = parsePath(pathToParent);
+    if(!path || path->entry->isADir != 'T'){
+        printf("Error: Invalid Dir Location\n");
+        return 1;
+    }
+    fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
+    int freeEntryIndex = -1;
+    int i = 0;
+    for(i;i<MAX_DIR_ENTRIES;i++){
+        if(strcmp(dir->directryEntries[i].filename, dirName) == 0){
+            printf("Error: Duplicate Dir Name\n");
+            return 1;
+        }
+    }
+
+    i=0;
+    for(i;i<MAX_DIR_ENTRIES;i++){
+        if(strcmp(dir->directryEntries[i].filename,"")==0){
+            freeEntryIndex = i;
+            break;
+        }
+    }
+    if(freeEntryIndex == -1){
+        printf("There are no free entries\n");
+        return 1;
+    }
+    FileScope freeBlock = findFree(1);
+    printf("FREE BLOCK %d\n", freeBlock.start);
+
+    // TODO: Check if block is actually free!
+    fsDir* newDir = makeDir(dirName, freeBlock.start, dir->directryEntries[0]);
+    addDirEntryFromDir(dir, newDir, freeEntryIndex);
+    LBAwrite(dir,DIR_SIZE, dir->currentBlockLocation);
+    LBAwrite(newDir,DIR_SIZE,newDir->currentBlockLocation);
+
+    // TODO: Mark freespace as being taken at newDir->currentBlockLocation;
+    free(newDir);
     return 0;
 }
 int fs_rmdir(const char *pathname){
