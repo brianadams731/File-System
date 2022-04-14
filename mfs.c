@@ -111,14 +111,14 @@ int fs_isFile(char * path){
 }
 
 int fs_mkdir(const char *pathname, mode_t mode){
-    char* pathFromArg = malloc(sizeof(pathname));
+    if(strcmp(pathname," ")==0){
+            printf("Error: Dir must have a name\n");
+            return 1;
+    }
+
     if(pathname[0] == '/'){
         // absolute
     }else{
-        if(strcmp(pathname," ")==0){
-            printf("Error: Dir must have a name\n");
-            return 1;
-        }
         fs_Path* path = parsePath(currentPath);
         fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
         int freeEntryIndex = -1;
