@@ -47,7 +47,20 @@ typedef struct DirectoryInfo {
 } fsDir;
 
 fsDir* initRootDir();
+
+/*
+* @ owns: nothing, you will need to free the memory returned
+* @ params name: name of directory
+* @ params blockLocation: which block in the lba the dir will be located at
+* @ params parentDirEntry: the DirectoryEntry of the parent 
+*/
 fsDir* makeDir(const char* name, int blockLocation, fsDirEntry parentDirEntry);
+/*
+* @ params targetDir: directory you want to add a Directory Entry to
+* @ params sourceDir: directory you want to get your Directory Entry data from
+* @ params targetIndex: index of the targetDir Directory entry that you want to write the sourceDir data to
+* @ returns void
+*/
 void addDirEntryFromDir(fsDir* targetDir, fsDir* sourceDir, int targetIndex);
 //fsDir* findDir(const char* name);
 

@@ -143,7 +143,7 @@ int fs_mkdir(const char *pathname, mode_t mode){
         // TODO: Mark freespace as being taken at newDir->currentBlockLocation;
         free(newDir);
     }
-    return 1;
+    return 0;
 }
 int fs_rmdir(const char *pathname){
 
