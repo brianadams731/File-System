@@ -125,3 +125,45 @@ void markFree(int location){
     free(freeUp);
 
 }
+
+/*
+freeData getFreeSpace(int blockAmount){
+    freeData file;
+    file.start = 0;
+    file.end = 0;
+    file.freeBlockCount = 0;
+
+    char* freeSpaceArray = malloc(FREE_ARRAY_SIZE);
+    LBAread(freeSpaceArray, sizeof(freeSpaceArray), FREE_ARRAY_LOCATION);
+    int i = 0;
+    for(i; i<FREE_ARRAY_SIZE; i++){
+        if(freeSpaceArray[i]=='X'){
+            file.start = i+1;
+        }
+        if(i - file.start > blockAmount){
+            file.end = i;
+            break;
+        }
+    }
+    for(i; i<FREE_ARRAY_SIZE; i++){
+        if(freeSpaceArray[i]=='O'){
+            file.freeBlockCount++;
+        }
+    }
+    free(freeSpaceArray);
+    printf("BLOCKS TAKEN: %d\nFile End: %d\nFile Start: %d\n", file.end -file.start, file.end, file.start);
+
+    return file;
+}
+void markUsedSpace(freeData file){
+    char* freeSpaceArray = malloc(FREE_ARRAY_SIZE);
+    LBAread(freeSpaceArray, sizeof(freeSpaceArray), FREE_ARRAY_LOCATION);
+    if(file.end != 0){
+        int i = file.start;
+        for(i; i<= file.end; i++){
+            freeSpaceArray[i] = 'X';
+        }
+    }
+    LBAwrite(freeSpaceArray, FREE_ARRAY_SIZE, FREE_ARRAY_LOCATION);
+}
+*/
