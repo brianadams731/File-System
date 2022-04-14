@@ -54,16 +54,16 @@ typedef struct mapLocation {
 void initFreeSpace();
 
 FileScope findFree(int blockAmount);
+void markFree(int location);
+
 
 typedef struct freeData{
-    int start;
-    int end;
+    int start; // FIRST BLOCK WRITTEN TO
+    int end; // LAST BLOCK WRITTEN TO, this block is not free
     long freeBlockCount;
 } freeData;
-
-
-void markFree(int location);
 void markUsedSpace(freeData file);
+void markFreeSpace(int location, int size);
 freeData getFreeSpace(int blockAmount);
 
 

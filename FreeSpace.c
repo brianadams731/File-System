@@ -142,7 +142,7 @@ freeData getFreeSpace(int blockAmount){
         if(freeSpaceArray[i]=='X'){
             file.start = i+1;
         }
-        if(i - file.start >= blockAmount){
+        if(i - file.start >= blockAmount - 1){
             file.end = i;
             break;
         }
@@ -164,5 +164,18 @@ void markUsedSpace(freeData file){
             freeSpaceArray[i] = 'X';
         }
     }
+    free(freeSpaceArray);
+    LBAwrite(freeSpaceArray, FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
+}
+
+void markFreeSpace(int location, int size){
+    char* freeSpaceArray = malloc(FREE_ARRAY_SIZE);
+    LBAread(freeSpaceArray, sizeof(freeSpaceArray), FREE_ARRAY_LOCATION);
+    int i = 0;
+    for(i;i<=size;i++){
+        freeSpaceArray[location + i] = 'O';
+
+    }
+    free(freeSpaceArray);
     LBAwrite(freeSpaceArray, FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
 }

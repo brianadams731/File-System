@@ -163,6 +163,7 @@ int fs_mkdir(const char *pathname, mode_t mode){
     LBAwrite(dir,DIR_SIZE, dir->currentBlockLocation);
     LBAwrite(newDir,DIR_SIZE,newDir->currentBlockLocation);
     markUsedSpace(freeBlock);
+    
     free(newDir);
     return 0;
 }
