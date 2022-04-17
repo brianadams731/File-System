@@ -34,7 +34,6 @@ fsDir* initRootDir(){
     root->currentBlockLocation = ROOT_DIR_LOCATION;
     root->parentBlockLocation =  ROOT_DIR_LOCATION;
 
-    char* timeCreated = getCurrentTime();
     int i = 0;
     for(i; i<sizeof(root->directryEntries)/sizeof(fsDirEntry);i++){
         if(i<2){
@@ -42,8 +41,9 @@ fsDir* initRootDir(){
         root->directryEntries[i].entrySize = DIR_SIZE;
         root->directryEntries[i].isADir = 'T';
         root->directryEntries[i].fileBlockLocation = root->currentBlockLocation;
+        strcpy(root->directryEntries[i].permissions,"---");
         strcpy(root->directryEntries[i].author, "OS");
-        strcpy(root->directryEntries[i].dateCreated, timeCreated);
+        root->directryEntries[i].dateCreated = getCurrentDateTime();
         // TODO: Permissions if in project scope
         // TODO: Date created
         }else{
@@ -51,17 +51,14 @@ fsDir* initRootDir(){
             root->directryEntries[i].id = -1;
         }
     }
-    free(timeCreated);
     return root;
 }
 
 fsDir* makeDir(const char* name, int blockLocation, fsDirEntry parentDirEntry ){
-    getCurrentTime();
     fsDir* dir = malloc(sizeof(fsDir));
     strcpy(dir->name, name);
     dir->currentBlockLocation = blockLocation;
     dir->parentBlockLocation =  parentDirEntry.fileBlockLocation;
-    char* timeCreated = getCurrentTime();
 
     int i = 0;
     for(i; i<sizeof(dir->directryEntries)/sizeof(fsDirEntry);i++){
@@ -70,21 +67,22 @@ fsDir* makeDir(const char* name, int blockLocation, fsDirEntry parentDirEntry ){
             dir->directryEntries[i].entrySize = DIR_SIZE;
             dir->directryEntries[i].isADir = 'T';
             dir->directryEntries[i].fileBlockLocation = dir->currentBlockLocation;
-            strcpy(dir->directryEntries[i].author, "USER");
-            strcpy(dir->directryEntries[i].dateCreated, timeCreated);
+            strcpy(dir->directryEntries[i].permissions,"rwd");
+            strcpy(dir->directryEntries[i].author, "user");
+            dir->directryEntries[i].dateCreated = getCurrentDateTime();
         }else if(i==1){
             strcpy(dir->directryEntries[i].filename, "..");
             dir->directryEntries[i].entrySize = DIR_SIZE;
             dir->directryEntries[i].isADir = 'T';
             dir->directryEntries[i].fileBlockLocation = parentDirEntry.fileBlockLocation;
-            strcpy(dir->directryEntries[i].author, "USER");
-            strcpy(dir->directryEntries[i].dateCreated, timeCreated);
+            strcpy(dir->directryEntries[i].permissions,"---");
+            strcpy(dir->directryEntries[i].author, "user");
+            dir->directryEntries[i].dateCreated = getCurrentDateTime();
         }else{
             strcpy(dir->directryEntries[i].filename, "");
             dir->directryEntries[i].id = -1;
         }
     }
-    free(timeCreated);
     return dir;
 }
 
@@ -93,6 +91,7 @@ void addDirEntryFromDir(fsDir* targetDir, fsDir* sourceDir, int targetIndex){
     targetDir->directryEntries[targetIndex].entrySize = sourceDir->directryEntries[0].entrySize;
     targetDir->directryEntries[targetIndex].isADir = sourceDir->directryEntries[0].isADir;
     targetDir->directryEntries[targetIndex].fileBlockLocation = sourceDir->currentBlockLocation;
+    strcpy(targetDir->directryEntries[targetIndex].permissions, sourceDir->directryEntries[0].permissions);
     strcpy(targetDir->directryEntries[targetIndex].author, sourceDir->directryEntries[0].author);
 }
 
@@ -148,8 +147,8 @@ int rmDirEntry(fsDir* src, char* dirname){
 
         strcpy(src->directryEntries[i].filename,"");
         strcpy(src->directryEntries[i].author, "");
-        strcpy(src->directryEntries[i].dateCreated, "");
-        strcpy(src->directryEntries[i].permissions, "");
+        strcpy(src->directryEntries[i].permissions, "---");
+        src->directryEntries[i].dateCreated = 0;
         src->directryEntries[i].id = -1;
         src->directryEntries[i].entrySize = 0;
         src->directryEntries[i].fileBlockLocation = 0;
@@ -159,16 +158,73 @@ int rmDirEntry(fsDir* src, char* dirname){
     return 0;
 }
 
-char* getCurrentTime(){
+time_t getCurrentDateTime(){
     time_t timeNow;
-    struct tm * timeData;
-    
     time(&timeNow);
-    timeData = localtime(&timeNow);
-    char* dateTime = malloc(20);
-    sprintf(dateTime, "%d-%d-%d %d:%d:%d\n",
-    timeData->tm_year + 1900, timeData->tm_mon + 1, timeData->tm_mday, timeData->tm_hour, timeData->tm_min, timeData->tm_sec);
-    return dateTime;
+    return timeNow;
+}
+
+void setRead(fsDirEntry* targetEntry, int status){
+    if(status){
+        targetEntry->permissions[0] = 'r';
+    }else{
+        targetEntry->permissions[0] = '-';
+    }
+}
+void setWrite(fsDirEntry* targetEntry, int status){
+    if(status){
+        targetEntry->permissions[1] = 'w';
+    }else{
+        targetEntry->permissions[1] = '-';
+    }
+}
+void setDelete(fsDirEntry* targetEntry, int status){
+    if(status){
+        targetEntry->permissions[2] = 'd';
+    }else{
+        targetEntry->permissions[2] = '-';
+    }
+}
+
+int canRead(fsDirEntry* targetEntry){
+    if(!targetEntry){
+        return 0;
+    }
+    return targetEntry->permissions[0] == 'r';
+}
+int canWrite(fsDirEntry* targetEntry){
+    if(!targetEntry){
+        return 0;
+    }
+    return targetEntry->permissions[1] == 'w';
+}
+int canDelete(fsDirEntry* targetEntry){
+    if(!targetEntry){
+        return 0;
+    }
+    if(targetEntry->permissions[2] == 'd'){
+        if(targetEntry->isADir == 'T'){
+            fsDir* dir = loadDirFromBlock(targetEntry->fileBlockLocation);
+            int count = 0;
+            int i = 0;
+            for(i;i<MAX_DIR_ENTRIES;i++){
+                if(strcmp(dir->directryEntries[i].filename,"") != 0){
+                    ++count;
+                }
+            }
+            free(dir);
+            if(count > 2){ // accounting for self, and parrent
+                printf("Error: Directory cannot delete directories that are not empty");
+                return 0;
+            }
+            return 1;
+        }else{
+            return 1;
+        }
+    }else{
+        printf("Error: Invalid Permission\n");
+    }
+    return 0;
 }
 
 // For debug only, used to make sure dir is being initalized correctly

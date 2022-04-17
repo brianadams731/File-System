@@ -17,7 +17,7 @@
 * all of its related functions.
 **************************************************************/
 //#include "VolumeControlBlock.h"
-
+#include <time.h>
 #ifndef DIRECTORY_H
 #define DIRECTORY_H
 
@@ -32,9 +32,9 @@ typedef struct fsDirEntry {
     int entrySize;              // size of file
     int fileBlockLocation;      // file location
     char isADir;                // is file a directory?
-    char dateCreated[20];       // date created 
+    time_t dateCreated;         // date created 
     char author[20];            // file author
-    char permissions[9];        // file permissions
+    char permissions[4];        // file permissions [0] is read (r), [1] is write (w), [2] is delete (d)
 } fsDirEntry;
 
 
@@ -89,9 +89,26 @@ fsDir* fetchRootDir();
 */
 fsDir* loadDirFromBlock(int blockLocation);
 
+time_t getCurrentDateTime();
+
 /*
-* @ owns: nothing, you will need to deallocate the memory used by the return
+* @ params targetEntry: this is the dir you would like to change write permissions to
+* @ params status: 1 is to add write permissions, 0 is to remove write permissions
 */
-char* getCurrentTime();
+void setRead(fsDirEntry* targetEntry, int status);
+/*
+* @ params targetEntry: this is the dir you would like to change write permissions to
+* @ params status: 1 is to add write permissions, 0 is to remove write permissions
+*/
+void setWrite(fsDirEntry* targetEntry, int status);
+/*
+* @ params targetEntry: this is the dir you would like to change write permissions to
+* @ params status: 1 is to add write permissions, 0 is to remove write permissions
+*/
+void setDelete(fsDirEntry* targetEntry, int status);
+
+int canRead(fsDirEntry* targetEntry);
+int canWrite(fsDirEntry* targetEntry);
+int canDelete(fsDirEntry* targetEntry);
 
 #endif //DIRECTORY_H

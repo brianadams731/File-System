@@ -195,14 +195,20 @@ int fs_rmdir(const char *pathname){
     // THIS HAS ALREADY CHECKED IF PATH EXISTS AND IS A DIR
     char pathToParent[300];
     char dirName[25];
+    if(strcmp(pathname,".") == 0){
+        printf("Error: Invalid Path\n");
+        return 1;
+    }
     if(pathname[0] == '/'){
         parentPath* parentData = getParentPath(pathname);
         if(strcmp(parentData->name,"") == 0){
             printf("Error: Invalid name\n");
+            free(parentData);
             return 1;
         }
         strcpy(pathToParent, parentData->path);
         strcpy(dirName, parentData->name);
+        free(parentData);
     }else{
         strcpy(pathToParent, currentPath);
         strcpy(dirName, pathname);
@@ -217,8 +223,16 @@ int fs_rmdir(const char *pathname){
     fsDirEntry* dirEntryToDelete = malloc(sizeof(fsDirEntry));
     dirEntryToDelete = findDirEntry(parentDir, dirName);
 
+
     if(!dirEntryToDelete){
         printf("ERROR: Dir entry cannot be located\n");
+        freePath(parentDirEntry);
+        free(parentDir);
+        return 1;
+    }
+    if(canDelete(dirEntryToDelete) == 0){
+        freePath(parentDirEntry);
+        free(parentDir);
         return 1;
     }
 
@@ -290,5 +304,35 @@ int fs_closedir(fdDir *dirp){
 
 // -------------
 int fs_stat(const char *path, struct fs_stat *buf){
-
+    fs_Path* dirPath = parsePath(currentPath);
+    int found = 0;
+    if(!dirPath || dirPath->entry->isADir != 'T'){
+        printf("ERROR: PATH NOT FOUND IN FS_STAT");
+        freePath(dirPath);
+        return 0;
+    }
+    fsDir* dir = loadDirFromBlock(dirPath->entry->fileBlockLocation);
+    int i = 0;
+    for(i; i<MAX_DIR_ENTRIES; i++){
+        if(strcmp(dir->directryEntries[i].filename, path) == 0){
+            found = 1;
+            break;
+        }
+    }
+    if(found){
+        buf->st_size = dir->directryEntries[i].entrySize * BLOCK_SIZE;
+        buf->st_blksize = BLOCK_SIZE;
+        buf->st_blocks = dir->directryEntries[i].entrySize;
+        buf->st_createtime = dir->directryEntries[i].dateCreated;
+        strcpy(buf->permissions, dir->directryEntries[i].permissions);
+        // TODO: add modtime
+        // TODO: add accesstime
+        buf->st_accesstime = getCurrentDateTime();
+        buf->st_modtime = dir->directryEntries[i].dateCreated;
+    }else{
+        printf("NOT FOUND...Path: %s\n",path);
+    }
+    free(dir);
+    freePath(dirPath);
+    return found;
 }

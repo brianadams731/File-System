@@ -17,5 +17,13 @@ typedef struct parentPath{
 * use the appropriate loader to load the resource
 */
 parentPath* getParentPath(const char* path);
+
+/*
+* @ owns: nothing, it is up to the caller to deallocate this!
+*/
 fs_Path*  parsePath(char* path);
-int freePath(fs_Path* fs_path); // 1 indicates path was deallocated correctly, 0 indicates error
+
+/*
+*   @ returns: 1 indicates path was deallocated correctly, 0 indicates error
+*/
+int freePath(fs_Path* fs_path);
