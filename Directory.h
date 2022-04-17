@@ -32,8 +32,8 @@ typedef struct fsDirEntry {
     int entrySize;              // size of file
     int fileBlockLocation;      // file location
     char isADir;                // is file a directory?
-    char dateCreated[10];       // date created 
-    char author[32];            // file author
+    char dateCreated[20];       // date created 
+    char author[20];            // file author
     char permissions[9];        // file permissions
 } fsDirEntry;
 
@@ -89,6 +89,9 @@ fsDir* fetchRootDir();
 */
 fsDir* loadDirFromBlock(int blockLocation);
 
-
+/*
+* @ owns: nothing, you will need to deallocate the memory used by the return
+*/
+char* getCurrentTime();
 
 #endif //DIRECTORY_H

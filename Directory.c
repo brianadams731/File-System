@@ -25,6 +25,7 @@
 #include "fsLow.h"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 
 fsDir* initRootDir(){
@@ -33,6 +34,7 @@ fsDir* initRootDir(){
     root->currentBlockLocation = ROOT_DIR_LOCATION;
     root->parentBlockLocation =  ROOT_DIR_LOCATION;
 
+    char* timeCreated = getCurrentTime();
     int i = 0;
     for(i; i<sizeof(root->directryEntries)/sizeof(fsDirEntry);i++){
         if(i<2){
@@ -41,6 +43,7 @@ fsDir* initRootDir(){
         root->directryEntries[i].isADir = 'T';
         root->directryEntries[i].fileBlockLocation = root->currentBlockLocation;
         strcpy(root->directryEntries[i].author, "OS");
+        strcpy(root->directryEntries[i].dateCreated, timeCreated);
         // TODO: Permissions if in project scope
         // TODO: Date created
         }else{
@@ -48,15 +51,17 @@ fsDir* initRootDir(){
             root->directryEntries[i].id = -1;
         }
     }
-
+    free(timeCreated);
     return root;
 }
 
 fsDir* makeDir(const char* name, int blockLocation, fsDirEntry parentDirEntry ){
+    getCurrentTime();
     fsDir* dir = malloc(sizeof(fsDir));
     strcpy(dir->name, name);
     dir->currentBlockLocation = blockLocation;
     dir->parentBlockLocation =  parentDirEntry.fileBlockLocation;
+    char* timeCreated = getCurrentTime();
 
     int i = 0;
     for(i; i<sizeof(dir->directryEntries)/sizeof(fsDirEntry);i++){
@@ -66,17 +71,20 @@ fsDir* makeDir(const char* name, int blockLocation, fsDirEntry parentDirEntry ){
             dir->directryEntries[i].isADir = 'T';
             dir->directryEntries[i].fileBlockLocation = dir->currentBlockLocation;
             strcpy(dir->directryEntries[i].author, "USER");
+            strcpy(dir->directryEntries[i].dateCreated, timeCreated);
         }else if(i==1){
             strcpy(dir->directryEntries[i].filename, "..");
             dir->directryEntries[i].entrySize = DIR_SIZE;
             dir->directryEntries[i].isADir = 'T';
             dir->directryEntries[i].fileBlockLocation = parentDirEntry.fileBlockLocation;
             strcpy(dir->directryEntries[i].author, "USER");
+            strcpy(dir->directryEntries[i].dateCreated, timeCreated);
         }else{
             strcpy(dir->directryEntries[i].filename, "");
             dir->directryEntries[i].id = -1;
         }
     }
+    free(timeCreated);
     return dir;
 }
 
@@ -150,6 +158,19 @@ int rmDirEntry(fsDir* src, char* dirname){
     }
     return 0;
 }
+
+char* getCurrentTime(){
+    time_t timeNow;
+    struct tm * timeData;
+    
+    time(&timeNow);
+    timeData = localtime(&timeNow);
+    char* dateTime = malloc(20);
+    sprintf(dateTime, "%d-%d-%d %d:%d:%d\n",
+    timeData->tm_year + 1900, timeData->tm_mon + 1, timeData->tm_mday, timeData->tm_hour, timeData->tm_min, timeData->tm_sec);
+    return dateTime;
+}
+
 // For debug only, used to make sure dir is being initalized correctly
 /*
 int main(){
