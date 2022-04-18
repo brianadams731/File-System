@@ -215,7 +215,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			//printf("\n%s\n",writeBlock);
 			LBAwrite(writeBlock, 1, fcbArray[fd].prevKey);
 			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
-			fcbArray[fd].blockCount++;
 			fcbArray[fd].fileSize = fcbArray[fd].fileSize + startOfNextBlock;
 		}
 	}
