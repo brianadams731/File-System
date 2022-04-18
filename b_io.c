@@ -21,6 +21,10 @@
 #include <fcntl.h>
 #include "b_io.h"
 
+#include "Directory.h"
+#include "FreeSpace.h"
+#include "VolumeControlBlock.h"
+
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
 
@@ -30,6 +34,8 @@ typedef struct b_fcb
 	char * buf;		//holds the open file buffer
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
+	fsDirEntry entry;
+	accessMode[3]; // --- or rwd
 	} b_fcb;
 	
 b_fcb fcbArray[MAXFCBS];

@@ -17,7 +17,7 @@
 * as well as the interface for vcbInit.
 **************************************************************/
 
-#define VOLUME_SIZE 100000
+#define VOLUME_SIZE 10000000
 #define BLOCK_SIZE 512
 #define VOLUME_LOCATION 0 
 
