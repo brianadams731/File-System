@@ -95,10 +95,29 @@ void addDirEntryFromDir(fsDir* targetDir, fsDir* sourceDir, int targetIndex){
     strcpy(targetDir->directryEntries[targetIndex].author, sourceDir->directryEntries[0].author);
 }
 
+int addExistingDirEntry(fsDir* targetDir, fsDirEntry* entry){
+    int position = 0;
+    int found = 0;
+    for(position; position<MAX_DIR_ENTRIES; position++){
+        if(strcmp(targetDir->directryEntries[position].filename, "") == 0){
+            found = 1;
+            break;
+        }
+    }
+    if(!found){
+        return 0;
+    }
+    memcpy(&targetDir->directryEntries[position], entry, sizeof(fsDirEntry));
+    return 1;
+}
+
 /*fsDir* findDir(const char* name){
 
 }*/
 
+/*
+* @ owns: nothing, you need to deallocate this memory!
+*/
 fsDir* fetchRootDir(){
     return loadDirFromBlock(ROOT_DIR_LOCATION);
 }

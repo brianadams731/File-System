@@ -91,7 +91,6 @@ b_io_fd b_open (char * filename, int flags)
 	{
 	b_io_fd returnFd;
 
-	
 	//*** TODO ***:  Modify to save or set any information needed
 	//
 	//
@@ -147,9 +146,8 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		fcbArray[fd].buflen = 200;
 		freeData freeSpace = getFreeSpace(1);
 
-		//fcbArray[fd].prevKey = freeSpace.start;
 		fcbArray[fd].initialKey = freeSpace.start;
-		fcbArray[fd].prevKey = 41;
+		fcbArray[fd].prevKey = freeSpace.start;
 		//printf("INIT KEY: %d\n",freeSpace.start);
 		if(freeSpace.end == 0){
 			printf("NO FREE SPACE\n");
@@ -178,9 +176,8 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
 		}
 	}else{
-		//printf("SPENT BUFFER\n");
 		memcpy(&writeBlock[bytesInWriteBlock], buffer, bytesLeftToFillBuffer);
-
+		markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
 		freeData freeSpace = getFreeSpace(1);
 		int key = freeSpace.start;
 		//printf("Bytes in Buff: %d, Bytes Left To Fill Buff: %d\n", bytesInWriteBlock, bytesLeftToFillBuffer);
@@ -191,8 +188,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 		LBAwrite(writeBlock,1, fcbArray[fd].prevKey);
 		fcbArray[fd].blockCount++;
-		fcbArray[fd].fileSize = fcbArray[fd].fileSize + bytesLeftToFillBuffer;
-		markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
+		fcbArray[fd].fileSize = fcbArray[fd].fileSize + bytesLeftToFillBuffer + sizeof(int); // TODO: Consider if file size should include key?
 		
 		fcbArray[fd].prevKey = key; // need to write after LBAwrite
 
@@ -267,13 +263,47 @@ int b_read (b_io_fd fd, char * buffer, int count)
 void b_close (b_io_fd fd)
 	{
 		if(fcbArray[fd].isWrite){
-			// ADD FILE ENTRY HERE
+			fsDir* rootDir = fetchRootDir();
+			fsDirEntry* entryToAdd = malloc(sizeof(fsDirEntry));
+
+			strcpy(entryToAdd->author,"user");
+			strcpy(entryToAdd->filename, fcbArray[fd].name);
+
+			entryToAdd->dateCreated = getCurrentDateTime();
+			entryToAdd->lastModified = getCurrentDateTime();
+			entryToAdd->lastAccess = getCurrentDateTime();
+			entryToAdd->fileBlockLocation = fcbArray[fd].initialKey;
+			strcpy(entryToAdd->permissions,"rwd");
+			entryToAdd->fileSizeBytes = fcbArray[fd].fileSize;
+			entryToAdd->entrySize = fcbArray[fd].blockCount;
+			entryToAdd->isADir = 'F';
+
+			addExistingDirEntry(rootDir, entryToAdd);
+			LBAwrite(rootDir, DIR_SIZE, ROOT_DIR_LOCATION);
+			free(rootDir);
+			free(entryToAdd);
 		}
+
+
 		//TEST CODE
-		/*
-		char buf[BLOCK_SIZE];
-		LBAread(buf,1,41);
-		printf("OUT BUFFER: %s\n", buf);
-		*/
+		fsDir* rootDir = fetchRootDir();
+		fsDirEntry* dirEntry = findDirEntry(rootDir, "test");
+		char* buff = malloc(BLOCK_SIZE);
+		int nextKey = dirEntry->fileBlockLocation;
+
+		int i = 0;
+		for(i; i <= dirEntry->entrySize; i++){
+			LBAread(buff,1, nextKey);
+			nextKey = getKeyFromBlock(buff, BLOCK_SIZE);
+			char* data = getDataFromBlock(buff, BLOCK_SIZE);
+			printf("%s\n",data);
+			if(i != dirEntry->entrySize){
+				printf("KEY: %d", nextKey);
+			}
+			free(data);
+		}
+
+		free(buff);
+		free(rootDir);
 		//END TEST
 	}

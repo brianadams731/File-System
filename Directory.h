@@ -115,4 +115,10 @@ int canRead(fsDirEntry* targetEntry);
 int canWrite(fsDirEntry* targetEntry);
 int canDelete(fsDirEntry* targetEntry);
 
+/*
+* @ targetDir: directory to write entry to
+* @ entry: entry to append to dirEntry array
+* @ returns: 1 indicates dir added, 0 indicates failure
+*/
+int addExistingDirEntry(fsDir* targetDir, fsDirEntry* entry);
 #endif //DIRECTORY_H
