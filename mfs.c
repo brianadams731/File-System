@@ -61,6 +61,7 @@ int fs_setcwd(char *buf){
         }
         strcpy(currentPath, buf);
         addCurrentDirFromPath();
+        freePath(path);
     }else{
         //Checking if buf is a valid directory
         fs_Path* path = parsePath(currentPath);
@@ -148,6 +149,7 @@ int fs_mkdir(const char *pathname, mode_t mode){
         }
         strcpy(pathToParent, parentData->path);
         strcpy(dirName, parentData->name);
+        free(parentData);
     }else{
         strcpy(pathToParent, currentPath);
         strcpy(dirName, pathname);
@@ -155,6 +157,7 @@ int fs_mkdir(const char *pathname, mode_t mode){
     fs_Path* path = parsePath(pathToParent);
     if(!path || path->entry->isADir != 'T'){
         printf("Error: Invalid Dir Location\n");
+        freePath(path);
         return 1;
     }
     fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
@@ -163,6 +166,7 @@ int fs_mkdir(const char *pathname, mode_t mode){
     for(i;i<MAX_DIR_ENTRIES;i++){
         if(strcmp(dir->directryEntries[i].filename, dirName) == 0){
             printf("Error: Duplicate Dir Name\n");
+            freePath(path);
             return 1;
         }
     }
@@ -176,11 +180,13 @@ int fs_mkdir(const char *pathname, mode_t mode){
     }
     if(freeEntryIndex == -1){
         printf("There are no free entries\n");
+        freePath(path);
         return 1;
     }
     freeData freeBlock = getFreeSpace(DIR_SIZE);
     if(freeBlock.end == 0){
         printf("Error: Insufficent Free Space");
+        freePath(path);
         return 1;
     }
     fsDir* newDir = makeDir(dirName, freeBlock.start, dir->directryEntries[0]);
@@ -190,6 +196,7 @@ int fs_mkdir(const char *pathname, mode_t mode){
     markUsedSpace(freeBlock);
     
     free(newDir);
+    freePath(path);
     return 0;
 }
 int fs_rmdir(const char *pathname){

@@ -76,6 +76,7 @@ void addDirEntryFromDir(fsDir* targetDir, fsDir* sourceDir, int targetIndex);
 */
 fsDirEntry* findDirEntry(fsDir* src, char* dirname);
 
+int fileNameExistsInDirEntry(fsDir* src, char* dirname);
 /*
 * WARNING: THIS ONLY REMOVES IT FROM MEMORY, YOU WILL NEED TO OVERWRITE THE PARENT BLOCK
 * @ owns: void

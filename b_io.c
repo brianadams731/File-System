@@ -110,22 +110,41 @@ b_io_fd b_open (char * filename, int flags)
 			fs_getcwd(currentPath, 300);
         	fs_Path* parsedPath = parsePath(currentPath);
 			if(!parsedPath){
-				printf("Error: Path not valid");
+				printf("Error: Path not valid (b_io)\n");
+				return -1;
+			}
+			// TODO: Handle file names that traverse relative 
+			fcbArray[returnFd].blockOfDirFileIsIn = parsedPath->entry->fileBlockLocation;
+			strcpy(fcbArray[returnFd].name, filename);
+			
+			free(currentPath);
+			freePath(parsedPath);
+		}else{
+			parentPath* parent = getParentPath(filename);
+			fs_Path* parsedPath = parsePath(parent->path);
+			if(!parsedPath){
+				printf("Error: Path not valid (b_io)\n");
 				return -1;
 			}
 			fcbArray[returnFd].blockOfDirFileIsIn = parsedPath->entry->fileBlockLocation;
-		}else{
-			char usePath[300];
-        	// handel absolute path;
+			strcpy(fcbArray[returnFd].name, parent->name);
+
+			free(parent);
+			freePath(parsedPath);
     	}
 		
+		fsDir* dirToIO = loadDirFromBlock(fcbArray[returnFd].blockOfDirFileIsIn);
+		if(fileNameExistsInDirEntry(dirToIO, fcbArray[returnFd].name) == 1){
+			printf("Error: Filename already exists (b_io)\n");
+			return -1;
+		}
+		free(dirToIO);
 
 		fcbArray[returnFd].isStart = 1;
 		fcbArray[returnFd].index = 0;
 		fcbArray[returnFd].prevKey = -1;
 		fcbArray[returnFd].buflen = -1;
 		fcbArray[returnFd].isWrite = 0;
-		strcpy(fcbArray[returnFd].name, filename);
 	}
 	
 	return (returnFd);						// all set

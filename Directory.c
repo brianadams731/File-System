@@ -246,6 +246,17 @@ int canDelete(fsDirEntry* targetEntry){
     return 0;
 }
 
+int fileNameExistsInDirEntry(fsDir* src, char* dirname){
+    int i = 0;
+    for(i;i<MAX_DIR_ENTRIES;i++){
+        if(strcmp(src->directryEntries[i].filename, dirname) == 0){
+            printf("Error: Duplicate Dir Name\n");
+            return 1;
+        }
+    }
+    return 0;
+}
+
 // For debug only, used to make sure dir is being initalized correctly
 /*
 int main(){
