@@ -179,3 +179,32 @@ void markFreeSpace(int location, int size){
     free(freeSpaceArray);
     LBAwrite(freeSpaceArray, FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
 }
+
+void markUsedSpaceByBlock(int start, int numberOfBlocks){
+    char* freeSpaceArray = malloc(FREE_ARRAY_SIZE);
+    LBAread(freeSpaceArray, sizeof(freeSpaceArray), FREE_ARRAY_LOCATION);
+    if(start != 0){
+        int i = start;
+        for(i; i< start + numberOfBlocks; i++){
+            freeSpaceArray[i] = 'X';
+        }
+    }
+    free(freeSpaceArray);
+    LBAwrite(freeSpaceArray, FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
+}
+
+int getKeyFromBlock(char* buffer, int bufferSize){
+    int key;
+    memcpy(&key, &buffer[bufferSize-sizeof(int)], sizeof(int));
+    return key;
+}
+
+int writeKeyToBuffer(char* buffer, int bufferSize, int key){
+    memcpy(&buffer[bufferSize-sizeof(int)], &key, sizeof(int));
+}
+
+char* getDataFromBlock(char* buffer, int bufferSize){
+    char* retBuf = malloc(bufferSize - sizeof(int));
+    memcpy(retBuf, buffer, bufferSize - sizeof(int));
+    return retBuf;
+}

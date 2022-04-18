@@ -37,7 +37,7 @@
 ROOTNAME=hexdump
 HW=
 FOPTION=
-RUNOPTIONS=
+RUNOPTIONS= --file SampleVolume --count 8 --start 39
 CC=gcc
 CFLAGS= -g -I.
 LIBS =pthread

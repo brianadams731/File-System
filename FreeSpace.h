@@ -63,8 +63,12 @@ typedef struct freeData{
     long freeBlockCount;
 } freeData;
 void markUsedSpace(freeData file);
+void markUsedSpaceByBlock(int start, int numberOfBlocks);
 void markFreeSpace(int location, int size);
 freeData getFreeSpace(int blockAmount);
 
+char* getDataFromBlock(char* buffer, int bufferSize);
+int getKeyFromBlock(char* buffer, int bufferSize);
+int writeKeyToBuffer(char* buffer, int bufferSize, int key);
 
 #endif

@@ -24,9 +24,13 @@
 #include "Directory.h"
 #include "FreeSpace.h"
 #include "VolumeControlBlock.h"
+#include "fsLow.h"
 
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
+
+#define BufferWithKeyOffset (BLOCK_SIZE - sizeof(int))
+
 
 typedef struct b_fcb
 	{
@@ -34,13 +38,26 @@ typedef struct b_fcb
 	char * buf;		//holds the open file buffer
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
+
+	int isStart;
+	int isWrite;
+	char name[32];
+	int initialKey;
+	int blockCount;
+	int fileSize;
+
+	int prevKey;
 	fsDirEntry entry;
-	accessMode[3]; // --- or rwd
+	char accessMode[3];  // -- or rwd
+
 	} b_fcb;
 	
 b_fcb fcbArray[MAXFCBS];
 
 int startup = 0;	//Indicates that this has not been initialized
+
+char writeBlock[BLOCK_SIZE];
+int bytesInWriteBlock;
 
 //Method to initialize our file system
 void b_init ()
@@ -74,6 +91,7 @@ b_io_fd b_open (char * filename, int flags)
 	{
 	b_io_fd returnFd;
 
+	
 	//*** TODO ***:  Modify to save or set any information needed
 	//
 	//
@@ -82,6 +100,15 @@ b_io_fd b_open (char * filename, int flags)
 	
 	returnFd = b_getFCB();				// get our own file descriptor
 										// check for error - all used FCB's
+	if(returnFd != -1){
+		// set up fcb on write
+		fcbArray[returnFd].isStart = 1;
+		fcbArray[returnFd].index = 0;
+		fcbArray[returnFd].prevKey = -1;
+		fcbArray[returnFd].buflen = -1;
+		fcbArray[returnFd].isWrite = 0;
+		strcpy(fcbArray[returnFd].name, filename);
+	}
 	
 	return (returnFd);						// all set
 	}
@@ -109,21 +136,95 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	{
 		
 	if (startup == 0) b_init();  //Initialize our system
-
-	int testFd =  open("test.txt",O_RDONLY);
-	printf("INCOMING FD: %ld", fd);
-	printf("TEST FD: %ld", testFd);
-	if(testFd != -1 ){
-		close(testFd);
+	// check that fd is between 0 and (MAXFCBS-1)
+	if ((fd < 0) || (fd >= MAXFCBS)){
+		return (-1); 					//invalid file descriptor
 	}
 
-	// check that fd is between 0 and (MAXFCBS-1)
-	if ((fd < 0) || (fd >= MAXFCBS))
-		{
-		return (-1); 					//invalid file descriptor
+	if(fcbArray[fd].isStart){
+		fcbArray[fd].isStart = 0;
+		fcbArray[fd].isWrite = 1;
+		fcbArray[fd].buflen = 200;
+		freeData freeSpace = getFreeSpace(1);
+
+		//fcbArray[fd].prevKey = freeSpace.start;
+		fcbArray[fd].initialKey = freeSpace.start;
+		fcbArray[fd].prevKey = 41;
+		//printf("INIT KEY: %d\n",freeSpace.start);
+		if(freeSpace.end == 0){
+			printf("NO FREE SPACE\n");
+			return -1;
 		}
+	}
+
+	int bytesLeftToFillBuffer = BufferWithKeyOffset - bytesInWriteBlock - 1;
+
+	if(count < bytesLeftToFillBuffer){
+		//printf("FILLING BUFFER\n");
+		memcpy(&writeBlock[bytesInWriteBlock], buffer, count);
+		bytesInWriteBlock = bytesInWriteBlock + count;
+		if(count < fcbArray[fd].buflen){ // last write
+			//printf("\n\n\nLAST BUFFER\n\n\n");
+			//printf("\nLast Count In Block: %d\n", bytesInWriteBlock);
+			//printf("\n%s\n",writeBlock);
+			int i = count;
+			for(i; i<BufferWithKeyOffset; i++){
+				writeBlock[i] = '0';
+			}
+
+			LBAwrite(writeBlock,1, fcbArray[fd].prevKey);
+			fcbArray[fd].blockCount++;
+			fcbArray[fd].fileSize = fcbArray[fd].fileSize + count;
+			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
+		}
+	}else{
+		//printf("SPENT BUFFER\n");
+		memcpy(&writeBlock[bytesInWriteBlock], buffer, bytesLeftToFillBuffer);
+
+		freeData freeSpace = getFreeSpace(1);
+		int key = freeSpace.start;
+		//printf("Bytes in Buff: %d, Bytes Left To Fill Buff: %d\n", bytesInWriteBlock, bytesLeftToFillBuffer);
+		//printf("Count In Block: %d", bytesInWriteBlock + bytesLeftToFillBuffer);
+		//printf("\n%s\n",writeBlock);
+
+		writeKeyToBuffer(writeBlock, BLOCK_SIZE, key);
+
+		LBAwrite(writeBlock,1, fcbArray[fd].prevKey);
+		fcbArray[fd].blockCount++;
+		fcbArray[fd].fileSize = fcbArray[fd].fileSize + bytesLeftToFillBuffer;
+		markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
 		
+		fcbArray[fd].prevKey = key; // need to write after LBAwrite
+
+		int startOfNextBlock = count - bytesLeftToFillBuffer;
+		memcpy(&writeBlock[0], &buffer[bytesLeftToFillBuffer], startOfNextBlock);
+		bytesInWriteBlock = startOfNextBlock;
 		
+		//printf("START OF NEXT BLOCK: %d\n", startOfNextBlock);
+		if(freeSpace.end == 0){
+			printf("ERROR: Insufficient freespace\n");
+			return -1;
+		}
+
+		if(count < fcbArray[fd].buflen){ // last write
+			//printf("\n\nLAST BUFFER\n\n\n");
+			//printf("LEFT: %d", count - startOfNextBlock);
+			//printf("START OF NEXT BLOCK: %d", startOfNextBlock);
+
+			int i = startOfNextBlock;
+			for(i; i<BufferWithKeyOffset; i++){
+				writeBlock[i] = '0';
+			}
+
+			//printf("\n%s\n",writeBlock);
+			LBAwrite(writeBlock, 1, fcbArray[fd].prevKey);
+			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
+			fcbArray[fd].blockCount++;
+			fcbArray[fd].fileSize = fcbArray[fd].fileSize + startOfNextBlock;
+		}
+	}
+
+	//TODO: Figure out ret val
 	return (0); //Change this
 	}
 
@@ -165,5 +266,14 @@ int b_read (b_io_fd fd, char * buffer, int count)
 // Interface to Close the file	
 void b_close (b_io_fd fd)
 	{
-
+		if(fcbArray[fd].isWrite){
+			// ADD FILE ENTRY HERE
+		}
+		//TEST CODE
+		/*
+		char buf[BLOCK_SIZE];
+		LBAread(buf,1,41);
+		printf("OUT BUFFER: %s\n", buf);
+		*/
+		//END TEST
 	}
