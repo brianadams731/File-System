@@ -79,27 +79,6 @@ int fs_setcwd(char *buf){
 
 
 char * fs_getcwd(char *buf, size_t size){
-
-    /*char testBuffer[BLOCK_SIZE];
-    char readBuf[BLOCK_SIZE];
-
-    char* dataToWrite = "abcdefg";
-    int key = 12;
-    
-    strcpy(testBuffer, dataToWrite);
-    writeKeyToBuffer(testBuffer, BLOCK_SIZE, key);
-
-    LBAwrite(testBuffer, 1, 421);
-    LBAread(readBuf,1,421);
-
-    int outKey = getKeyFromBlock(readBuf, BLOCK_SIZE);
-    char* dataFromBlock = getDataFromBlock(readBuf, BLOCK_SIZE);
-
-    printf("Test data %s\n", dataFromBlock);
-    printf("Test Key: %d\n", outKey);
-    // ----------------------------------
-    */
-   
     if(size >= strlen(currentPath)){
         strcpy(buf, currentPath);
     }else{

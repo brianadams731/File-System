@@ -20,7 +20,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "b_io.h"
+#include "mfs.h"
 
+#include "parsePath.h"
 #include "Directory.h"
 #include "FreeSpace.h"
 #include "VolumeControlBlock.h"
@@ -39,6 +41,7 @@ typedef struct b_fcb
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
 
+	int blockOfDirFileIsIn;
 	int isStart;
 	int isWrite;
 	char name[32];
@@ -101,6 +104,22 @@ b_io_fd b_open (char * filename, int flags)
 										// check for error - all used FCB's
 	if(returnFd != -1){
 		// set up fcb on write
+		
+    	if(filename[0] != '/'){
+			char* currentPath = malloc(300);
+			fs_getcwd(currentPath, 300);
+        	fs_Path* parsedPath = parsePath(currentPath);
+			if(!parsedPath){
+				printf("Error: Path not valid");
+				return -1;
+			}
+			fcbArray[returnFd].blockOfDirFileIsIn = parsedPath->entry->fileBlockLocation;
+		}else{
+			char usePath[300];
+        	// handel absolute path;
+    	}
+		
+
 		fcbArray[returnFd].isStart = 1;
 		fcbArray[returnFd].index = 0;
 		fcbArray[returnFd].prevKey = -1;
@@ -262,7 +281,7 @@ int b_read (b_io_fd fd, char * buffer, int count)
 void b_close (b_io_fd fd)
 	{
 		if(fcbArray[fd].isWrite){
-			fsDir* rootDir = fetchRootDir();
+			fsDir* parentDir = loadDirFromBlock(fcbArray[fd].blockOfDirFileIsIn);
 			fsDirEntry* entryToAdd = malloc(sizeof(fsDirEntry));
 
 			strcpy(entryToAdd->author,"user");
@@ -277,14 +296,15 @@ void b_close (b_io_fd fd)
 			entryToAdd->entrySize = fcbArray[fd].blockCount;
 			entryToAdd->isADir = 'F';
 
-			addExistingDirEntry(rootDir, entryToAdd);
-			LBAwrite(rootDir, DIR_SIZE, ROOT_DIR_LOCATION);
-			free(rootDir);
+			addExistingDirEntry(parentDir, entryToAdd);
+			LBAwrite(parentDir, DIR_SIZE, parentDir->currentBlockLocation);
+			free(parentDir);
 			free(entryToAdd);
 		}
 
 
 		//TEST CODE
+		/*
 		fsDir* rootDir = fetchRootDir();
 		fsDirEntry* dirEntry = findDirEntry(rootDir, "test");
 		char* buff = malloc(BLOCK_SIZE);
@@ -304,5 +324,6 @@ void b_close (b_io_fd fd)
 
 		free(buff);
 		free(rootDir);
+		*/
 		//END TEST
 	}
