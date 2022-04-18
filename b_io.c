@@ -53,7 +53,7 @@ b_io_fd b_getFCB ()
 	{
 	for (int i = 0; i < MAXFCBS; i++)
 		{
-		if (fcbArray[i].buff == NULL)
+		if (fcbArray[i].buf == NULL)
 			{
 			return i;		//Not thread safe (But do not worry about it for this assignment)
 			}
@@ -101,7 +101,15 @@ int b_seek (b_io_fd fd, off_t offset, int whence)
 // Interface to write function	
 int b_write (b_io_fd fd, char * buffer, int count)
 	{
+		
 	if (startup == 0) b_init();  //Initialize our system
+
+	int testFd =  open("test.txt",O_RDONLY);
+	printf("INCOMING FD: %ld", fd);
+	printf("TEST FD: %ld", testFd);
+	if(testFd != -1 ){
+		close(testFd);
+	}
 
 	// check that fd is between 0 and (MAXFCBS-1)
 	if ((fd < 0) || (fd >= MAXFCBS))

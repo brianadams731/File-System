@@ -29,10 +29,14 @@
 typedef struct fsDirEntry {
     int id;                     // file id 
     char filename[32];          // file name
-    int entrySize;              // size of file
+    int entrySize;              // size of file in blocks
     int fileBlockLocation;      // file location
     char isADir;                // is file a directory?
     time_t dateCreated;         // date created 
+
+    time_t lastModified;
+    time_t lastAccess; 
+    int fileSizeBytes;          // file size in bytes
     char author[20];            // file author
     char permissions[4];        // file permissions [0] is read (r), [1] is write (w), [2] is delete (d)
 } fsDirEntry;
