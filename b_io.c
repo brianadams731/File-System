@@ -19,6 +19,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <math.h>
+
 #include "b_io.h"
 #include "mfs.h"
 
@@ -50,6 +52,8 @@ typedef struct b_fcb
 	char type;
 
 	int totalBytesRead;
+
+	char* readBlock;
 	int bytesReadInBlock;
 	int prevKey;
 	fsDirEntry entry;
@@ -61,8 +65,8 @@ b_fcb fcbArray[MAXFCBS];
 
 int startup = 0;	//Indicates that this has not been initialized
 
-char writeBlock[BLOCK_SIZE];
-int bytesInWriteBlock;
+//char writeBlock[BLOCK_SIZE];
+//int bytesInWriteBlock;
 
 //Method to initialize our file system
 void b_init ()
@@ -136,6 +140,18 @@ b_io_fd b_open (char * filename, int flags)
 			free(parent);
 			freePath(parsedPath);
     	}
+
+		// Base reset
+		fcbArray[returnFd].index = 0;
+		fcbArray[returnFd].blockCount = 0;
+		fcbArray[returnFd].buflen = 200;
+		fcbArray[returnFd].bytesReadInBlock = 0;
+		fcbArray[returnFd].totalBytesRead = 0;
+		fcbArray[returnFd].initialKey = 0;
+		fcbArray[returnFd].blockCount = 0;
+		fcbArray[returnFd].fileSize = 0;
+
+		
 		if(flags == (O_WRONLY | O_CREAT | O_TRUNC)){
 			printf("WRITE\n");
 			// write
@@ -149,12 +165,10 @@ b_io_fd b_open (char * filename, int flags)
 
 			// write set fcb setup
 			fcbArray[returnFd].type = 'w';
-			fcbArray[returnFd].index = 0;
-			fcbArray[returnFd].blockCount = 0;
-			fcbArray[returnFd].buflen = 200;
 			freeData freeSpace = getFreeSpace(1);
 			fcbArray[returnFd].initialKey = freeSpace.start;
 			fcbArray[returnFd].prevKey = freeSpace.start;
+			fcbArray[returnFd].readBlock = malloc(BLOCK_SIZE);
 			if(freeSpace.end == 0){
 				printf("NO FREE SPACE\n");
 				return -1;
@@ -174,12 +188,8 @@ b_io_fd b_open (char * filename, int flags)
 			free(dir);
 
 			fcbArray[returnFd].type = 'r';
-			fcbArray[returnFd].blockCount = 0;
-			fcbArray[returnFd].index = 0;
+			fcbArray[returnFd].initialKey = fcbArray[returnFd].entry.fileBlockLocation; // used for debug
 			fcbArray[returnFd].prevKey = fcbArray[returnFd].entry.fileBlockLocation;
-			fcbArray[returnFd].buflen = 200;
-			fcbArray[returnFd].totalBytesRead = 0;
-			fcbArray[returnFd].bytesReadInBlock = 0;
 		}
 	}
 	
@@ -214,8 +224,109 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		return (-1); 					//invalid file descriptor
 	}
 
+	/* Write States
+	* 0 - readBuffer fit inBuffer
+	* 1 - readBuffer needs to wite block, then continue to be filled by inBuffer
+	* 2 - final inBufferFill
+	*/
+	int state;
+	// can fit entire inbuffer in readbuffer
+	if(count < fcbArray[fd].buflen){
+		state = 2;
+	}else if(BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock >= count){
+		state = 0; 
+	}else{
+		state = 1;
+	}
 
+	printf("BYTES IN READ BLOCK %d\n",  fcbArray[fd].bytesReadInBlock);
+	
+	if(state == 0){
+		printf("FILL\n");
+		memcpy(&fcbArray[fd].readBlock[fcbArray[fd].bytesReadInBlock], buffer, count);
+		fcbArray[fd].fileSize += count;
+		fcbArray[fd].bytesReadInBlock += count;
+	}
+	// cannot fit entire buffer into read block
+	else if(state == 1){
+		printf("REFILL\n");
+		// Fill read buffer
+		int amountRequiredToFillReadBuffer = BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock;
+		memcpy(&fcbArray[fd].readBlock[fcbArray[fd].bytesReadInBlock], buffer, amountRequiredToFillReadBuffer);
+		fcbArray[fd].fileSize += amountRequiredToFillReadBuffer;
+		
+		// Copy write location for filled block
+		int writeLoc = fcbArray[fd].prevKey;
 
+		// Mark block with next block key
+		markUsedSpaceByBlock(writeLoc, 1);
+		freeData freeSpace = getFreeSpace(1);
+		fcbArray[fd].prevKey = freeSpace.start;
+		writeKeyToBuffer(fcbArray[fd].readBlock, BLOCK_SIZE, fcbArray[fd].prevKey);
+
+		// write logical block
+		LBAwrite(fcbArray[fd].readBlock, 1, writeLoc);
+		fcbArray[fd].blockCount++;
+
+		// reset bytes read in block
+		fcbArray[fd].bytesReadInBlock = 0;
+
+		// Begin refilling readBuffer
+		int amountLeftInInputBuffer = count - amountRequiredToFillReadBuffer;
+		memcpy(fcbArray[fd].readBlock, &buffer[amountRequiredToFillReadBuffer], amountLeftInInputBuffer);
+		fcbArray[fd].fileSize += amountLeftInInputBuffer;
+		fcbArray[fd].bytesReadInBlock += amountLeftInInputBuffer;
+
+	}
+	// last write
+	else{
+		printf("END\n");
+		int amountRequiredToFillReadBuffer = BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock;
+		// can fit remaining inBuffer in readBuffer
+		if(amountRequiredToFillReadBuffer >= count){
+			memcpy(&fcbArray[fd].readBlock[fcbArray[fd].bytesReadInBlock], buffer, count);
+			fcbArray[fd].fileSize += count;
+			fcbArray[fd].bytesReadInBlock += count;
+
+			LBAwrite(fcbArray[fd].readBlock, 1, fcbArray[fd].prevKey);
+			fcbArray[fd].blockCount++;
+			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
+		// cannot fit remaining inBuffer in readBuffer
+		}else{
+			memcpy(&fcbArray[fd].readBlock[fcbArray[fd].bytesReadInBlock], buffer, amountRequiredToFillReadBuffer);
+			fcbArray[fd].fileSize += amountRequiredToFillReadBuffer;
+		
+			// Copy write location for filled block
+			int writeLoc = fcbArray[fd].prevKey;
+
+			// Mark block with next block key
+			markUsedSpaceByBlock(writeLoc, 1);
+			freeData freeSpace = getFreeSpace(1);
+			fcbArray[fd].prevKey = freeSpace.start;
+			writeKeyToBuffer(fcbArray[fd].readBlock, BLOCK_SIZE, fcbArray[fd].prevKey);
+			
+			// write logical block
+			LBAwrite(fcbArray[fd].readBlock, 1, writeLoc);
+			fcbArray[fd].blockCount++;
+
+			// reset bytes read in block
+			fcbArray[fd].bytesReadInBlock = 0;
+
+			//write in final portion of buffer into readBlock
+			int remainingLeftFromInBuffer = count - amountRequiredToFillReadBuffer;
+			memcpy(fcbArray[fd].readBlock, &buffer[amountRequiredToFillReadBuffer], remainingLeftFromInBuffer);
+			fcbArray[fd].fileSize += remainingLeftFromInBuffer;
+			fcbArray[fd].bytesReadInBlock += remainingLeftFromInBuffer;
+
+			// Write logical block
+			LBAwrite(fcbArray[fd].readBlock, 1, fcbArray[fd].prevKey);
+			fcbArray[fd].blockCount++;
+			markUsedSpaceByBlock(writeLoc, 1);
+		}
+	}
+
+	return count;
+	/* Prefactor
 	int bytesLeftToFillBuffer = BufferWithKeyOffset - bytesInWriteBlock;
 
 	if(count < bytesLeftToFillBuffer){
@@ -225,6 +336,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		bytesInWriteBlock += count;
 		
 		if(count < fcbArray[fd].buflen){ // last write
+			printf("FINAL 1\n");
 			//printf("\n\n\nLAST BUFFER\n\n\n");
 			//printf("\nLast Count In Block: %d\n", bytesInWriteBlock);
 			//printf("\n%s\n",writeBlock);
@@ -267,6 +379,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		}
 
 		if(count < fcbArray[fd].buflen){ // last write
+			printf("FINAL 2\n");
 			//printf("\n\nLAST BUFFER\n\n\n");
 			//printf("LEFT: %d", count - startOfNextBlock);
 			//printf("START OF NEXT BLOCK: %d", startOfNextBlock);
@@ -276,7 +389,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 				writeBlock[i] = '0';
 			}
 
-			printf("\n%s\n",writeBlock);
 			LBAwrite(writeBlock, 1, fcbArray[fd].prevKey);
 			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
 		}
@@ -284,6 +396,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 	//TODO: Figure out ret val
 	return (0); //Change this
+	*/
 	}
 
 
@@ -307,8 +420,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 //  |             |                                                |        |
 //  | Part1       |  Part 2                                        | Part3  |
 //  +-------------+------------------------------------------------+--------+
-int b_read (b_io_fd fd, char * buffer, int count)
-	{
+int b_read (b_io_fd fd, char * buffer, int count){
 
 	if (startup == 0) b_init();  //Initialize our system
 
@@ -328,22 +440,18 @@ int b_read (b_io_fd fd, char * buffer, int count)
 	int readState;
 		// Blocks read         >=    total entry blocks     **Last Block
 	if((fcbArray[fd].entry.fileSizeBytes - fcbArray[fd].totalBytesRead) <= fcbArray[fd].buflen){
-		printf("TOTAL FILE SIZE: %d\n",fcbArray[fd].entry.fileSizeBytes);
-		printf("TOTAL BYTES READ: %d\n",fcbArray[fd].totalBytesRead);
-		printf("BUFFLEN: %d\n",fcbArray[fd].buflen);
-
-
-		printf("END\n");
+		//printf("TOTAL FILE SIZE: %d\n",fcbArray[fd].entry.fileSizeBytes);
+		//printf("TOTAL BYTES READ: %d\n",fcbArray[fd].totalBytesRead);
 		readState = 2;
 	}
 	// (total space in block -  bytes read from blockBuffer) >=  Size of out buffer  ** Can fill out buf with current block
 	else if(BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock >= fcbArray[fd].buflen){
-		printf("FULL\n");
+		//printf("FULL\n");
 		readState = 0;
 	}
 	// **the block spans two logical blocks
 	else{
-		printf("SPLIT\n");
+		//printf("SPLIT\n");
 		readState = 1;
 	}
 	// -------------------------------------------------------------------
@@ -367,9 +475,9 @@ int b_read (b_io_fd fd, char * buffer, int count)
 	}else if(readState == 1){
 		// Copy the remaining logical block, get block key, increment total bytes read with remaining block
 		countToCopy = BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock;
-		printf("PREV KEY: %d\n",fcbArray[fd].prevKey);
+		//printf("PREV KEY: %d\n",fcbArray[fd].prevKey);
 		fcbArray[fd].prevKey = getKeyFromBlock(blockBuffer, BLOCK_SIZE);
-		printf("THIS KEY: %d\n",fcbArray[fd].prevKey);
+		//printf("THIS KEY: %d\n",fcbArray[fd].prevKey);
 		memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCopy);
 		// increment total bytes read
 		fcbArray[fd].totalBytesRead += countToCopy;
@@ -401,28 +509,19 @@ int b_read (b_io_fd fd, char * buffer, int count)
 		
 		// Last Block Rolls over into another block
 		if(bytesLeftInCurrentOpenBlock < bytesLeftInFileToRead){
-			printf("HERE\n\n\n");
 			countToCopy = bytesLeftInCurrentOpenBlock;
-			printf("BUFFER WITH KEY OFFSET %ld\n", BufferWithKeyOffset);
-			printf("TOTAL BYTES READ: %d\n", fcbArray[fd].totalBytesRead);
-			printf("BYTES LEFT IN FILE %d\n", countToCopy);
 			memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCopy);
-			printf("OLD KEY %d\n", fcbArray[fd].prevKey);
 			fcbArray[fd].bytesReadInBlock = 0;
 			fcbArray[fd].prevKey = getKeyFromBlock(blockBuffer, BLOCK_SIZE);
 			LBAread(blockBuffer, 1, fcbArray[fd].prevKey);
 			printf("FINAL KEY %d\n", fcbArray[fd].prevKey);
 			int oldCountToCopy = countToCopy;
 			countToCopy = bytesLeftInFileToRead - countToCopy;
-
+			printf("TOTAL BYTES READ: %d\n", fcbArray[fd].totalBytesRead + oldCountToCopy + countToCopy);
 			memcpy(&buffer[oldCountToCopy], blockBuffer, countToCopy);
-			printf("TOTAL BYTES COPIED %d\n", oldCountToCopy + countToCopy);
 			return oldCountToCopy + countToCopy;
 
 		}else{
-			printf("LAST BLOCK\n");
-			printf("TOTAL FILE SIZE: %d, TOTAL BYTES READ: %d\n",fcbArray[fd].entry.fileSizeBytes, fcbArray[fd].totalBytesRead);
-			printf("COUNT TO CPY: %d, COUNT OF BYTES IN BUFFER %d\n", countToCopy, fcbArray[fd].bytesReadInBlock);
 			// count to copy = total filesize - bytes already read
 			countToCopy = fcbArray[fd].entry.fileSizeBytes - fcbArray[fd].totalBytesRead;
 			memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCopy);
@@ -436,63 +535,18 @@ int b_read (b_io_fd fd, char * buffer, int count)
 			return countToCopy;
 		}
 	}
-
-	// total size on fs 4212
-	// over run on read 78
-	// linux size 4134
-	// bug on write size!!!
-	/* // Prefactor
-	free(blockBuffer);
-	return countToCpy;
-
-	int countToCpy = BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock >= fcbArray[fd].buflen ? fcbArray[fd].buflen : BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock;
-	
-	if(fcbArray[fd].blockCount >= fcbArray[fd].entry.entrySize - 1){
-			// end of block read!
-			printf("LAST BLOCK\n");
-			printf("ICI\n");
-			printf("TOTAL FILE SIZE: %d, TOTAL BYTES READ: %d\n",fcbArray[fd].entry.fileSizeBytes, fcbArray[fd].totalBytesRead);
-			printf("COUNT TO CPY: %d, COUNT OF BYTES IN BUFFER %d", countToCpy, fcbArray[fd].bytesReadInBlock);
-			memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], fcbArray[fd].entry.fileSizeBytes - fcbArray[fd].totalBytesRead);
-			fcbArray[fd].totalBytesRead += countToCpy;
-			printf("TOTAL BYTES WRITTEN %d\n",fcbArray[fd].totalBytesRead);
-			printf("TOTAL SIZE OF FILE %d\n",fcbArray[fd].entry.fileSizeBytes);
-			free(blockBuffer);
-			return fcbArray[fd].entry.fileSizeBytes, fcbArray[fd].totalBytesRead;
-	}
-
-	if(countToCpy < fcbArray[fd].buflen){ // reached end of block;
-		fcbArray[fd].blockCount++;
-		fcbArray[fd].prevKey = getKeyFromBlock(blockBuffer, BLOCK_SIZE);
-		memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCpy);
-		printf("PRE COUNT CPY: %d, PRE BYTES IN BUFF: %d\n", countToCpy, fcbArray[fd].bytesReadInBlock);
-
-		fcbArray[fd].bytesReadInBlock = 0;
-		fcbArray[fd].totalBytesRead += countToCpy;
-
-		LBAread(blockBuffer, 1, fcbArray[fd].prevKey);
-		int oldCountToCpy = countToCpy;
-		countToCpy = fcbArray[fd].buflen - countToCpy;
-		memcpy(&buffer[oldCountToCpy], &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCpy);
-		fcbArray[fd].bytesReadInBlock += countToCpy;
-		fcbArray[fd].totalBytesRead += countToCpy;
-
-		printf("POST COUNT CPY: %d, POST BYTES IN BUFF: %d\n\n", countToCpy, fcbArray[fd].bytesReadInBlock);
-		return oldCountToCpy + countToCpy;
-	}
-
-	memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCpy);
-	fcbArray[fd].bytesReadInBlock += countToCpy;
-	fcbArray[fd].totalBytesRead += countToCpy;
-
-	free(blockBuffer);
-	return countToCpy;
-	*/
-	}
+}
 	
 // Interface to Close the file	
 void b_close (b_io_fd fd)
 	{
+		printf("Closed\n");
+		printf("Initial Key: %d\n", fcbArray[fd].initialKey);
+		printf("Final Key: %d\n", fcbArray[fd].prevKey);
+		printf("Total File Size: %d\n", fcbArray[fd].fileSize);
+		printf("Total Actual Block Count %d\n", fcbArray[fd].blockCount);
+		printf("Total Calc Block Count From File Size %ld\n", (long) ceil((double)fcbArray[fd].fileSize/(BLOCK_SIZE - sizeof(int))));
+		printf("End Closed\n");
 		if(fcbArray[fd].type == 'w'){
 			fsDir* parentDir = loadDirFromBlock(fcbArray[fd].blockNumberOfParentDir);
 			fsDirEntry* entryToAdd = malloc(sizeof(fsDirEntry));
@@ -511,6 +565,8 @@ void b_close (b_io_fd fd)
 
 			addExistingDirEntry(parentDir, entryToAdd);
 			LBAwrite(parentDir, DIR_SIZE, parentDir->currentBlockLocation);
+
+			free(fcbArray[fd].readBlock);
 			free(parentDir);
 			free(entryToAdd);
 

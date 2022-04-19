@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 #include "Directory.h"
 #include "fsLow.h"
 #include "mfs.h"
@@ -55,6 +56,7 @@ int fs_setcwd(char *buf){
     }else if(strcmp(buf,"..") == 0){
         popEntryFromCurrentPath();
     }else if(buf[0] == '/'){
+        // Absolute Path
         fs_Path* path = parsePath(buf);
         if(!path || path->entry->isADir != 'T'){
             return 1;
@@ -63,6 +65,7 @@ int fs_setcwd(char *buf){
         addCurrentDirFromPath();
         freePath(path);
     }else{
+        // Rel Path
         //Checking if buf is a valid directory
         fs_Path* path = parsePath(currentPath);
         fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
@@ -154,6 +157,7 @@ int fs_mkdir(const char *pathname, mode_t mode){
         strcpy(pathToParent, currentPath);
         strcpy(dirName, pathname);
     }
+
     fs_Path* path = parsePath(pathToParent);
     if(!path || path->entry->isADir != 'T'){
         printf("Error: Invalid Dir Location\n");
@@ -262,8 +266,56 @@ int fs_rmdir(const char *pathname){
     return didDelete?0:1;
 }
 int fs_delete(char* filename){
-    printf("IN FILE\n");
     // THIS HAS ALREADY CHECKED IF PATH EXISTS AND IS FILE
+    char pathToParent[300];
+    char dirName[25];
+
+    if(filename[0] == '/'){
+        parentPath* parentData = getParentPath(filename);
+        if(strcmp(parentData->name,"") == 0){
+            printf("Error: Invalid name\n");
+            free(parentData);
+            return 1;
+        }
+        strcpy(pathToParent, parentData->path);
+        strcpy(dirName, parentData->name);
+        free(parentData);
+    }else{
+        strcpy(pathToParent, currentPath);
+        strcpy(dirName, filename);
+    }
+
+    fs_Path* parsedPath = parsePath(pathToParent);
+    fsDir* parentDir = loadDirFromBlock(parsedPath->entry->fileBlockLocation);
+    freePath(parsedPath);
+    fsDirEntry* entryToRemove = findDirEntry(parentDir, dirName);
+
+    long checkBlock = (long) ceil(((double)entryToRemove->fileSizeBytes)/(BLOCK_SIZE - sizeof(int)));
+    int totalBlock = entryToRemove->entrySize;
+    printf("REMOVE\n");
+    printf("REAL BLOCK CONSUMPTION: %ld\n", checkBlock);
+    printf("RECORDED BLOCK CONSUMPTION: %d\n", totalBlock);
+
+    freeData freeCount = getFreeSpace(1);
+    printf("Free Block Count Before Remove: %ld\n", freeCount.freeBlockCount);
+    char* bufferBlock = malloc(BLOCK_SIZE);
+    int key = entryToRemove->fileBlockLocation;
+    int i = 0;
+    for(i;i< checkBlock;i++){
+        printf("KEY %d\n",key);
+        LBAread(bufferBlock, 1, key);
+        markFreeSpace(key,1);
+        key = (i != (checkBlock - 1))? getKeyFromBlock(bufferBlock, BLOCK_SIZE):-1;
+    }
+    free(bufferBlock);
+
+    freeCount = getFreeSpace(1);
+    printf("Free Block Count After: %ld\n", freeCount.freeBlockCount);
+    
+    rmDirEntry(parentDir, filename);
+    LBAwrite(parentDir, parentDir->directryEntries[0].entrySize, parentDir->currentBlockLocation);
+
+    free(parentDir);
 }
 // ------------
 fdDir * fs_opendir(const char *name){
