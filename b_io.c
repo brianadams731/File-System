@@ -134,7 +134,9 @@ b_io_fd b_open (char * filename, int flags)
 			free(parent);
 			freePath(parsedPath);
     	}
-		if(flags == O_WRONLY | O_CREAT | O_TRUNC){
+		if(flags == (O_WRONLY | O_CREAT | O_TRUNC)){
+			printf("WRITE\n");
+			// write
 			// Check if file exists in directory already
 			fsDir* dirToIO = loadDirFromBlock(fcbArray[returnFd].blockNumberOfParentDir);
 			if(fileNameExistsInDirEntry(dirToIO, fcbArray[returnFd].name) == 1){
@@ -157,7 +159,8 @@ b_io_fd b_open (char * filename, int flags)
 				return -1;
 			}
 		}
-		if(flags == O_RDONLY){
+		if(flags == (O_RDONLY)){
+			printf("READ\n");
 			// read
 			// Adding dir entry of file to read;
 			fsDir* dir = loadDirFromBlock(fcbArray[returnFd].blockNumberOfParentDir);
@@ -209,6 +212,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	if(count < bytesLeftToFillBuffer){
 		//printf("FILLING BUFFER\n");
 		memcpy(&writeBlock[bytesInWriteBlock], buffer, count);
+		fcbArray[fd].fileSize = fcbArray[fd].fileSize + count;
 		bytesInWriteBlock = bytesInWriteBlock + count;
 		if(count < fcbArray[fd].buflen){ // last write
 			//printf("\n\n\nLAST BUFFER\n\n\n");
@@ -226,6 +230,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		}
 	}else{
 		memcpy(&writeBlock[bytesInWriteBlock], buffer, bytesLeftToFillBuffer);
+		fcbArray[fd].fileSize = fcbArray[fd].fileSize + bytesLeftToFillBuffer;
 		markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
 		freeData freeSpace = getFreeSpace(1);
 		int key = freeSpace.start;
@@ -237,12 +242,12 @@ int b_write (b_io_fd fd, char * buffer, int count)
 
 		LBAwrite(writeBlock,1, fcbArray[fd].prevKey);
 		fcbArray[fd].blockCount++;
-		fcbArray[fd].fileSize = fcbArray[fd].fileSize + bytesLeftToFillBuffer + sizeof(int); // TODO: Consider if file size should include key?
 		
 		fcbArray[fd].prevKey = key; // need to write after LBAwrite
 
 		int startOfNextBlock = count - bytesLeftToFillBuffer;
 		memcpy(&writeBlock[0], &buffer[bytesLeftToFillBuffer], startOfNextBlock);
+		fcbArray[fd].fileSize = fcbArray[fd].fileSize + startOfNextBlock;
 		bytesInWriteBlock = startOfNextBlock;
 		
 		//printf("START OF NEXT BLOCK: %d\n", startOfNextBlock);
@@ -265,6 +270,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			LBAwrite(writeBlock, 1, fcbArray[fd].prevKey);
 			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
 			fcbArray[fd].fileSize = fcbArray[fd].fileSize + startOfNextBlock;
+			fcbArray[fd].blockCount++;
 		}
 	}
 
@@ -305,7 +311,10 @@ int b_read (b_io_fd fd, char * buffer, int count)
 		}
 	
 
-	return (0);	//Change this
+	char* test = "this is a test";
+	memcpy(buffer, test, strlen(test));
+	return strlen(test);
+	//return (0);	//Change this
 
 
 		//TEST CODE
@@ -357,6 +366,10 @@ void b_close (b_io_fd fd)
 			LBAwrite(parentDir, DIR_SIZE, parentDir->currentBlockLocation);
 			free(parentDir);
 			free(entryToAdd);
+
+			printf("FILE SIZE: %d\n",entryToAdd->fileSizeBytes);
+			printf("FILE BLOCKS: %d\n", entryToAdd->entrySize);
+			// should be 4134
 		}else if(fcbArray[fd].type == 'r'){
 
 		}
