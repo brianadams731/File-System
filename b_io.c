@@ -31,7 +31,7 @@
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
 
-#define BufferWithKeyOffset (BLOCK_SIZE - sizeof(int))
+#define BufferWithKeyOffset (BLOCK_SIZE - sizeof(int) - 1)
 #define EXTERNALBUFFERSIZE 200
 
 
@@ -49,6 +49,8 @@ typedef struct b_fcb
 	int fileSize;
 	char type;
 
+	int totalBytesRead;
+	int bytesReadInBlock;
 	int prevKey;
 	fsDirEntry entry;
 	char accessMode[3];  // -- or rwd
@@ -148,8 +150,6 @@ b_io_fd b_open (char * filename, int flags)
 			// write set fcb setup
 			fcbArray[returnFd].type = 'w';
 			fcbArray[returnFd].index = 0;
-			fcbArray[returnFd].prevKey = -1;
-			fcbArray[returnFd].buflen = -1;
 			fcbArray[returnFd].buflen = 200;
 			freeData freeSpace = getFreeSpace(1);
 			fcbArray[returnFd].initialKey = freeSpace.start;
@@ -171,7 +171,13 @@ b_io_fd b_open (char * filename, int flags)
 			}
 			memcpy(&fcbArray[returnFd].entry, dirEntry, sizeof(fsDirEntry));
 			free(dir);
+
 			fcbArray[returnFd].type = 'r';
+			fcbArray[returnFd].index = 0;
+			fcbArray[returnFd].prevKey = fcbArray[returnFd].entry.fileBlockLocation;
+			fcbArray[returnFd].buflen = 200;
+			fcbArray[returnFd].totalBytesRead = 0;
+			fcbArray[returnFd].bytesReadInBlock = 0;
 		}
 	}
 	
@@ -207,7 +213,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	}
 
 
-	int bytesLeftToFillBuffer = BufferWithKeyOffset - bytesInWriteBlock - 1;
+	int bytesLeftToFillBuffer = BufferWithKeyOffset - bytesInWriteBlock;
 
 	if(count < bytesLeftToFillBuffer){
 		//printf("FILLING BUFFER\n");
@@ -219,7 +225,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			//printf("\nLast Count In Block: %d\n", bytesInWriteBlock);
 			//printf("\n%s\n",writeBlock);
 			int i = count;
-			for(i; i<BufferWithKeyOffset; i++){
+			for(i; i<=BufferWithKeyOffset; i++){
 				writeBlock[i] = '0';
 			}
 
@@ -262,7 +268,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			//printf("START OF NEXT BLOCK: %d", startOfNextBlock);
 
 			int i = startOfNextBlock;
-			for(i; i<BufferWithKeyOffset; i++){
+			for(i; i<=BufferWithKeyOffset; i++){
 				writeBlock[i] = '0';
 			}
 
@@ -311,9 +317,47 @@ int b_read (b_io_fd fd, char * buffer, int count)
 		}
 	
 
-	char* test = "this is a test";
-	memcpy(buffer, test, strlen(test));
-	return strlen(test);
+	char* blockBuffer = malloc(BLOCK_SIZE);
+	LBAread(blockBuffer, 1, fcbArray[fd].prevKey);
+
+	int countToCpy = BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock >= fcbArray[fd].buflen ? fcbArray[fd].buflen : BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock;
+	
+	if(countToCpy < fcbArray[fd].buflen){ // reached end of block;
+		fcbArray[fd].blockCount++;
+		if(fcbArray[fd].blockCount > fcbArray[fd].entry.entrySize){
+			// end of block read!
+			printf("LAST BLOCK\n\n");
+			memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCpy);
+			fcbArray[fd].bytesReadInBlock += countToCpy;
+			fcbArray[fd].totalBytesRead += countToCpy;
+			free(blockBuffer);
+			return countToCpy;
+		}
+		printf("TOTAL BYTES WRITTEN %d\n",fcbArray[fd].totalBytesRead);
+
+		fcbArray[fd].prevKey = getKeyFromBlock(blockBuffer, BLOCK_SIZE);
+		memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCpy);
+		printf("PRE COUNT CPY: %d, PRE BYTES IN BUFF: %d\n", countToCpy, fcbArray[fd].bytesReadInBlock);
+
+		fcbArray[fd].bytesReadInBlock = 0;
+		fcbArray[fd].totalBytesRead += countToCpy;
+
+		LBAread(blockBuffer, 1, fcbArray[fd].prevKey);
+		int oldCountToCpy = countToCpy;
+		countToCpy = fcbArray[fd].buflen - countToCpy;
+		memcpy(&buffer[oldCountToCpy], &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCpy);
+		fcbArray[fd].bytesReadInBlock += countToCpy;
+
+		printf("POST COUNT CPY: %d, POST BYTES IN BUFF: %d\n\n", countToCpy, fcbArray[fd].bytesReadInBlock);
+		return oldCountToCpy + countToCpy;
+	}
+
+	memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCpy);
+	fcbArray[fd].bytesReadInBlock += countToCpy;
+	fcbArray[fd].totalBytesRead += countToCpy;
+
+	free(blockBuffer);
+	return countToCpy;
 	//return (0);	//Change this
 
 
