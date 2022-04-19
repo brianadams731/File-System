@@ -32,6 +32,7 @@
 #define B_CHUNK_SIZE 512
 
 #define BufferWithKeyOffset (BLOCK_SIZE - sizeof(int))
+#define EXTERNALBUFFERSIZE 200
 
 
 typedef struct b_fcb
@@ -41,13 +42,12 @@ typedef struct b_fcb
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
 
-	int blockOfDirFileIsIn;
-	int isStart;
-	int isWrite;
+	int blockNumberOfParentDir;
 	char name[32];
 	int initialKey;
 	int blockCount;
 	int fileSize;
+	char type;
 
 	int prevKey;
 	fsDirEntry entry;
@@ -103,9 +103,10 @@ b_io_fd b_open (char * filename, int flags)
 	returnFd = b_getFCB();				// get our own file descriptor
 										// check for error - all used FCB's
 	if(returnFd != -1){
-		// set up fcb on write
-		
+
+		// checks for valid parent path, and returns adds parent path, a file name 		
     	if(filename[0] != '/'){
+			// Handle for Relative Path
 			char* currentPath = malloc(300);
 			fs_getcwd(currentPath, 300);
         	fs_Path* parsedPath = parsePath(currentPath);
@@ -114,37 +115,61 @@ b_io_fd b_open (char * filename, int flags)
 				return -1;
 			}
 			// TODO: Handle file names that traverse relative 
-			fcbArray[returnFd].blockOfDirFileIsIn = parsedPath->entry->fileBlockLocation;
+			fcbArray[returnFd].blockNumberOfParentDir = parsedPath->entry->fileBlockLocation;
 			strcpy(fcbArray[returnFd].name, filename);
 			
 			free(currentPath);
 			freePath(parsedPath);
 		}else{
+			// Handle for Absolute Path
 			parentPath* parent = getParentPath(filename);
 			fs_Path* parsedPath = parsePath(parent->path);
 			if(!parsedPath){
 				printf("Error: Path not valid (b_io)\n");
 				return -1;
 			}
-			fcbArray[returnFd].blockOfDirFileIsIn = parsedPath->entry->fileBlockLocation;
+			fcbArray[returnFd].blockNumberOfParentDir = parsedPath->entry->fileBlockLocation;
 			strcpy(fcbArray[returnFd].name, parent->name);
 
 			free(parent);
 			freePath(parsedPath);
     	}
-		
-		fsDir* dirToIO = loadDirFromBlock(fcbArray[returnFd].blockOfDirFileIsIn);
-		if(fileNameExistsInDirEntry(dirToIO, fcbArray[returnFd].name) == 1){
-			printf("Error: Filename already exists (b_io)\n");
-			return -1;
-		}
-		free(dirToIO);
+		if(flags == O_WRONLY | O_CREAT | O_TRUNC){
+			// Check if file exists in directory already
+			fsDir* dirToIO = loadDirFromBlock(fcbArray[returnFd].blockNumberOfParentDir);
+			if(fileNameExistsInDirEntry(dirToIO, fcbArray[returnFd].name) == 1){
+				printf("Error: Filename already exists (b_io)\n");
+				return -1;
+			}
+			free(dirToIO);
 
-		fcbArray[returnFd].isStart = 1;
-		fcbArray[returnFd].index = 0;
-		fcbArray[returnFd].prevKey = -1;
-		fcbArray[returnFd].buflen = -1;
-		fcbArray[returnFd].isWrite = 0;
+			// write set fcb setup
+			fcbArray[returnFd].type = 'w';
+			fcbArray[returnFd].index = 0;
+			fcbArray[returnFd].prevKey = -1;
+			fcbArray[returnFd].buflen = -1;
+			fcbArray[returnFd].buflen = 200;
+			freeData freeSpace = getFreeSpace(1);
+			fcbArray[returnFd].initialKey = freeSpace.start;
+			fcbArray[returnFd].prevKey = freeSpace.start;
+			if(freeSpace.end == 0){
+				printf("NO FREE SPACE\n");
+				return -1;
+			}
+		}
+		if(flags == O_RDONLY){
+			// read
+			// Adding dir entry of file to read;
+			fsDir* dir = loadDirFromBlock(fcbArray[returnFd].blockNumberOfParentDir);
+			fsDirEntry* dirEntry = findDirEntry(dir, fcbArray[returnFd].name);
+			if(!dirEntry){
+				printf("Error: File Does not Exist");
+				return -1;
+			}
+			memcpy(&fcbArray[returnFd].entry, dirEntry, sizeof(fsDirEntry));
+			free(dir);
+			fcbArray[returnFd].type = 'r';
+		}
 	}
 	
 	return (returnFd);						// all set
@@ -178,20 +203,6 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		return (-1); 					//invalid file descriptor
 	}
 
-	if(fcbArray[fd].isStart){
-		fcbArray[fd].isStart = 0;
-		fcbArray[fd].isWrite = 1;
-		fcbArray[fd].buflen = 200;
-		freeData freeSpace = getFreeSpace(1);
-
-		fcbArray[fd].initialKey = freeSpace.start;
-		fcbArray[fd].prevKey = freeSpace.start;
-		//printf("INIT KEY: %d\n",freeSpace.start);
-		if(freeSpace.end == 0){
-			printf("NO FREE SPACE\n");
-			return -1;
-		}
-	}
 
 	int bytesLeftToFillBuffer = BufferWithKeyOffset - bytesInWriteBlock - 1;
 
@@ -292,34 +303,9 @@ int b_read (b_io_fd fd, char * buffer, int count)
 		{
 		return (-1); 					//invalid file descriptor
 		}
-		
-	return (0);	//Change this
-	}
 	
-// Interface to Close the file	
-void b_close (b_io_fd fd)
-	{
-		if(fcbArray[fd].isWrite){
-			fsDir* parentDir = loadDirFromBlock(fcbArray[fd].blockOfDirFileIsIn);
-			fsDirEntry* entryToAdd = malloc(sizeof(fsDirEntry));
 
-			strcpy(entryToAdd->author,"user");
-			strcpy(entryToAdd->filename, fcbArray[fd].name);
-
-			entryToAdd->dateCreated = getCurrentDateTime();
-			entryToAdd->lastModified = getCurrentDateTime();
-			entryToAdd->lastAccess = getCurrentDateTime();
-			entryToAdd->fileBlockLocation = fcbArray[fd].initialKey;
-			strcpy(entryToAdd->permissions,"rwd");
-			entryToAdd->fileSizeBytes = fcbArray[fd].fileSize;
-			entryToAdd->entrySize = fcbArray[fd].blockCount;
-			entryToAdd->isADir = 'F';
-
-			addExistingDirEntry(parentDir, entryToAdd);
-			LBAwrite(parentDir, DIR_SIZE, parentDir->currentBlockLocation);
-			free(parentDir);
-			free(entryToAdd);
-		}
+	return (0);	//Change this
 
 
 		//TEST CODE
@@ -345,4 +331,33 @@ void b_close (b_io_fd fd)
 		free(rootDir);
 		*/
 		//END TEST
+
+	}
+	
+// Interface to Close the file	
+void b_close (b_io_fd fd)
+	{
+		if(fcbArray[fd].type == 'w'){
+			fsDir* parentDir = loadDirFromBlock(fcbArray[fd].blockNumberOfParentDir);
+			fsDirEntry* entryToAdd = malloc(sizeof(fsDirEntry));
+
+			strcpy(entryToAdd->author,"user");
+			strcpy(entryToAdd->filename, fcbArray[fd].name);
+
+			entryToAdd->dateCreated = getCurrentDateTime();
+			entryToAdd->lastModified = getCurrentDateTime();
+			entryToAdd->lastAccess = getCurrentDateTime();
+			entryToAdd->fileBlockLocation = fcbArray[fd].initialKey;
+			strcpy(entryToAdd->permissions,"rwd");
+			entryToAdd->fileSizeBytes = fcbArray[fd].fileSize;
+			entryToAdd->entrySize = fcbArray[fd].blockCount;
+			entryToAdd->isADir = 'F';
+
+			addExistingDirEntry(parentDir, entryToAdd);
+			LBAwrite(parentDir, DIR_SIZE, parentDir->currentBlockLocation);
+			free(parentDir);
+			free(entryToAdd);
+		}else if(fcbArray[fd].type == 'r'){
+
+		}
 	}
