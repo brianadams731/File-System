@@ -142,6 +142,9 @@ b_io_fd b_open (char * filename, int flags)
     	}
 
 		// Base reset
+		fcbArray[returnFd].buf = malloc(5);
+		strcpy(fcbArray[returnFd].buf, "open");
+
 		fcbArray[returnFd].index = 0;
 		fcbArray[returnFd].blockCount = 0;
 		fcbArray[returnFd].buflen = 200;
@@ -321,83 +324,12 @@ int b_write (b_io_fd fd, char * buffer, int count)
 			// Write logical block
 			LBAwrite(fcbArray[fd].readBlock, 1, fcbArray[fd].prevKey);
 			fcbArray[fd].blockCount++;
-			markUsedSpaceByBlock(writeLoc, 1);
+			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
 		}
 	}
 
 	return count;
-	/* Prefactor
-	int bytesLeftToFillBuffer = BufferWithKeyOffset - bytesInWriteBlock;
-
-	if(count < bytesLeftToFillBuffer){
-		//printf("FILLING BUFFER\n");
-		memcpy(&writeBlock[bytesInWriteBlock], buffer, count);
-		fcbArray[fd].fileSize += count;
-		bytesInWriteBlock += count;
-		
-		if(count < fcbArray[fd].buflen){ // last write
-			printf("FINAL 1\n");
-			//printf("\n\n\nLAST BUFFER\n\n\n");
-			//printf("\nLast Count In Block: %d\n", bytesInWriteBlock);
-			//printf("\n%s\n",writeBlock);
-			int i = count;
-			for(i; i<=BufferWithKeyOffset; i++){
-				writeBlock[i] = '0';
-			}
-
-			LBAwrite(writeBlock,1, fcbArray[fd].prevKey);
-			fcbArray[fd].blockCount++;
-			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
-		}
-
-	}else{
-		memcpy(&writeBlock[bytesInWriteBlock], buffer, bytesLeftToFillBuffer);
-		fcbArray[fd].fileSize += bytesLeftToFillBuffer;
-
-		markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
-		freeData freeSpace = getFreeSpace(1);
-		int key = freeSpace.start;
-		//printf("Bytes in Buff: %d, Bytes Left To Fill Buff: %d\n", bytesInWriteBlock, bytesLeftToFillBuffer);
-		//printf("Count In Block: %d", bytesInWriteBlock + bytesLeftToFillBuffer);
-		//printf("\n%s\n",writeBlock);
-
-		writeKeyToBuffer(writeBlock, BLOCK_SIZE, key);
-		LBAwrite(writeBlock,1, fcbArray[fd].prevKey);
-		fcbArray[fd].blockCount++;
-		
-		fcbArray[fd].prevKey = key; // need to write after LBAwrite
-
-		int startOfNextBlock = count - bytesLeftToFillBuffer;
-		memcpy(&writeBlock[0], &buffer[bytesLeftToFillBuffer], startOfNextBlock);
-		fcbArray[fd].fileSize += startOfNextBlock;
-		bytesInWriteBlock = startOfNextBlock;
-		
-		//printf("START OF NEXT BLOCK: %d\n", startOfNextBlock);
-		if(freeSpace.end == 0){
-			printf("ERROR: Insufficient freespace\n");
-			return -1;
-		}
-
-		if(count < fcbArray[fd].buflen){ // last write
-			printf("FINAL 2\n");
-			//printf("\n\nLAST BUFFER\n\n\n");
-			//printf("LEFT: %d", count - startOfNextBlock);
-			//printf("START OF NEXT BLOCK: %d", startOfNextBlock);
-
-			int i = startOfNextBlock;
-			for(i; i<=BufferWithKeyOffset; i++){
-				writeBlock[i] = '0';
-			}
-
-			LBAwrite(writeBlock, 1, fcbArray[fd].prevKey);
-			markUsedSpaceByBlock(fcbArray[fd].prevKey, 1);
-		}
-	}
-
-	//TODO: Figure out ret val
-	return (0); //Change this
-	*/
-	}
+}
 
 
 
@@ -547,6 +479,8 @@ void b_close (b_io_fd fd)
 		printf("Total Actual Block Count %d\n", fcbArray[fd].blockCount);
 		printf("Total Calc Block Count From File Size %ld\n", (long) ceil((double)fcbArray[fd].fileSize/(BLOCK_SIZE - sizeof(int))));
 		printf("End Closed\n");
+		free(fcbArray[fd].buf);
+		fcbArray[fd].buf = NULL;
 		if(fcbArray[fd].type == 'w'){
 			fsDir* parentDir = loadDirFromBlock(fcbArray[fd].blockNumberOfParentDir);
 			fsDirEntry* entryToAdd = malloc(sizeof(fsDirEntry));
@@ -576,6 +510,4 @@ void b_close (b_io_fd fd)
 		}else if(fcbArray[fd].type == 'r'){
 
 		}
-
-		fcbArray[fd].buf = NULL;
 	}
