@@ -292,17 +292,17 @@ int fs_delete(char* filename){
 
     long checkBlock = (long) ceil(((double)entryToRemove->fileSizeBytes)/(BLOCK_SIZE - sizeof(int)));
     int totalBlock = entryToRemove->entrySize;
-    printf("REMOVE\n");
-    printf("REAL BLOCK CONSUMPTION: %ld\n", checkBlock);
-    printf("RECORDED BLOCK CONSUMPTION: %d\n", totalBlock);
+    //printf("REMOVE\n");
+    //printf("REAL BLOCK CONSUMPTION: %ld\n", checkBlock);
+    //printf("RECORDED BLOCK CONSUMPTION: %d\n", totalBlock);
 
     freeData freeCount = getFreeSpace(1);
-    printf("Free Block Count Before Remove: %ld\n", freeCount.freeBlockCount);
+    //printf("Free Block Count Before Remove: %ld\n", freeCount.freeBlockCount);
     char* bufferBlock = malloc(BLOCK_SIZE);
     int key = entryToRemove->fileBlockLocation;
     int i = 0;
     for(i;i< checkBlock;i++){
-        printf("KEY %d\n",key);
+        //printf("KEY %d\n",key);
         LBAread(bufferBlock, 1, key);
         markFreeSpace(key,1);
         key = (i != (checkBlock - 1))? getKeyFromBlock(bufferBlock, BLOCK_SIZE):-1;
@@ -310,7 +310,7 @@ int fs_delete(char* filename){
     free(bufferBlock);
 
     freeCount = getFreeSpace(1);
-    printf("Free Block Count After: %ld\n", freeCount.freeBlockCount);
+    //printf("Free Block Count After: %ld\n", freeCount.freeBlockCount);
     
     rmDirEntry(parentDir, filename);
     LBAwrite(parentDir, parentDir->directryEntries[0].entrySize, parentDir->currentBlockLocation);
@@ -395,4 +395,102 @@ int fs_stat(const char *path, struct fs_stat *buf){
     free(dir);
     freePath(dirPath);
     return found;
+}
+
+int fs_mv(char* srcFile, char* destDirPath){
+    char pathToDestDir[300];
+    char pathToSrc[300];
+
+    if(destDirPath[0] == '/'){
+        // abs path
+        strcpy(pathToDestDir, destDirPath);
+    }else{
+        // rel path
+        if(strcmp(currentPath,"/")== 0){
+            strcpy(pathToDestDir, destDirPath);
+        }else{
+            sprintf(pathToDestDir, "%s/%s",currentPath, destDirPath);
+        }
+        //printf("PATH TO DEST %s\n", pathToDestDir);
+    }
+    
+    fs_Path* pathDest = parsePath(pathToDestDir);
+    if(!pathDest){
+        printf("Error: Destination not found\n");
+        freePath(pathDest);
+        return 0;
+    }
+    fsDir* destDir = loadDirFromBlock(pathDest->entry->fileBlockLocation);
+    freePath(pathDest);
+    int i = 0;
+    int spaceForMoreDir = 0;
+    for(i;i<MAX_DIR_ENTRIES;i++){
+        if(strcmp(destDir->directryEntries[i].filename,"") == 0){
+            spaceForMoreDir = 1;
+            break;
+        }
+    }
+    if(spaceForMoreDir != 1){
+        free(destDir);
+        return 0;
+    }
+
+    if(srcFile[0] == '/'){
+        // absolute path
+        strcpy(pathToSrc, srcFile);
+    }else{
+        // rel path
+        if(strcmp(currentPath,"/") == 0){
+            strcpy(pathToSrc, srcFile);
+        }else{
+            sprintf(pathToSrc, "%s/%s",currentPath, srcFile);
+        }
+    }
+
+    fs_Path* pathToSrcFile = parsePath(pathToSrc);
+
+
+    if(!pathToSrcFile || pathToSrcFile->entry->isADir == 'T'){
+        printf("CWD %s\n", currentDirectory);
+        printf("Path to Src %s\n", pathToSrc);
+        printf("Error: File not found\n");
+        freePath(pathToSrcFile);
+        free(destDir);
+        return 0;
+    }
+    parentPath* srcParentPath = getParentPath(pathToSrc);
+    fs_Path* parent = parsePath(srcParentPath->path);
+
+    i = 0;
+    for(i; i < MAX_DIR_ENTRIES; i++){
+        if(strcmp(destDir->directryEntries[i].filename, pathToSrcFile->entry->filename) == 0){
+            printf("ERROR: File name already taken\n");
+            return 0;
+        }
+    }
+
+    if(!parent){
+        printf("Error: Parent to src not found");
+        freePath(pathToSrcFile);
+        free(srcParentPath);
+        freePath(parent);
+        free(destDir);
+        return 0;
+    }
+
+    fsDir* parentSrcDir = loadDirFromBlock(parent->entry->fileBlockLocation);
+    addExistingDirEntry(destDir, pathToSrcFile->entry);
+    rmDirEntry(parentSrcDir, pathToSrcFile->entry->filename);
+
+    LBAwrite(destDir, DIR_SIZE, destDir->currentBlockLocation);
+    LBAwrite(parentSrcDir, DIR_SIZE, parentSrcDir->currentBlockLocation);
+
+    free(destDir);
+    
+    //freePath(pathToSrcFile);
+    //freePath(parent);
+    //free(srcParentPath);
+    
+    free(parentSrcDir);
+    return 1;
 }

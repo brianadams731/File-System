@@ -156,7 +156,7 @@ b_io_fd b_open (char * filename, int flags)
 
 		
 		if(flags == (O_WRONLY | O_CREAT | O_TRUNC)){
-			printf("WRITE\n");
+			//printf("WRITE\n");
 			// write
 			// Check if file exists in directory already
 			fsDir* dirToIO = loadDirFromBlock(fcbArray[returnFd].blockNumberOfParentDir);
@@ -178,7 +178,7 @@ b_io_fd b_open (char * filename, int flags)
 			}
 		}
 		if(flags == (O_RDONLY)){
-			printf("READ\n");
+			//printf("READ\n");
 			// read
 			// Adding dir entry of file to read;
 			fsDir* dir = loadDirFromBlock(fcbArray[returnFd].blockNumberOfParentDir);
@@ -242,17 +242,17 @@ int b_write (b_io_fd fd, char * buffer, int count)
 		state = 1;
 	}
 
-	printf("BYTES IN READ BLOCK %d\n",  fcbArray[fd].bytesReadInBlock);
+	//printf("BYTES IN READ BLOCK %d\n",  fcbArray[fd].bytesReadInBlock);
 	
 	if(state == 0){
-		printf("FILL\n");
+		//printf("FILL\n");
 		memcpy(&fcbArray[fd].readBlock[fcbArray[fd].bytesReadInBlock], buffer, count);
 		fcbArray[fd].fileSize += count;
 		fcbArray[fd].bytesReadInBlock += count;
 	}
 	// cannot fit entire buffer into read block
 	else if(state == 1){
-		printf("REFILL\n");
+		//printf("REFILL\n");
 		// Fill read buffer
 		int amountRequiredToFillReadBuffer = BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock;
 		memcpy(&fcbArray[fd].readBlock[fcbArray[fd].bytesReadInBlock], buffer, amountRequiredToFillReadBuffer);
@@ -283,7 +283,7 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	}
 	// last write
 	else{
-		printf("END\n");
+		//printf("END\n");
 		int amountRequiredToFillReadBuffer = BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock;
 		// can fit remaining inBuffer in readBuffer
 		if(amountRequiredToFillReadBuffer >= count){
@@ -446,10 +446,10 @@ int b_read (b_io_fd fd, char * buffer, int count){
 			fcbArray[fd].bytesReadInBlock = 0;
 			fcbArray[fd].prevKey = getKeyFromBlock(blockBuffer, BLOCK_SIZE);
 			LBAread(blockBuffer, 1, fcbArray[fd].prevKey);
-			printf("FINAL KEY %d\n", fcbArray[fd].prevKey);
+			//printf("FINAL KEY %d\n", fcbArray[fd].prevKey);
 			int oldCountToCopy = countToCopy;
 			countToCopy = bytesLeftInFileToRead - countToCopy;
-			printf("TOTAL BYTES READ: %d\n", fcbArray[fd].totalBytesRead + oldCountToCopy + countToCopy);
+			//printf("TOTAL BYTES READ: %d\n", fcbArray[fd].totalBytesRead + oldCountToCopy + countToCopy);
 			memcpy(&buffer[oldCountToCopy], blockBuffer, countToCopy);
 			return oldCountToCopy + countToCopy;
 
@@ -459,8 +459,8 @@ int b_read (b_io_fd fd, char * buffer, int count){
 			memcpy(buffer, &blockBuffer[fcbArray[fd].bytesReadInBlock], countToCopy);
 			fcbArray[fd].totalBytesRead += countToCopy;
 	
-			printf("TOTAL BYTES WRITTEN %d\n",fcbArray[fd].totalBytesRead);
-			printf("TOTAL SIZE OF FILE %d\n",fcbArray[fd].entry.fileSizeBytes);
+			//printf("TOTAL BYTES WRITTEN %d\n",fcbArray[fd].totalBytesRead);
+			//printf("TOTAL SIZE OF FILE %d\n",fcbArray[fd].entry.fileSizeBytes);
 	
 			// free and exit
 			free(blockBuffer);
@@ -472,13 +472,13 @@ int b_read (b_io_fd fd, char * buffer, int count){
 // Interface to Close the file	
 void b_close (b_io_fd fd)
 	{
-		printf("Closed\n");
-		printf("Initial Key: %d\n", fcbArray[fd].initialKey);
-		printf("Final Key: %d\n", fcbArray[fd].prevKey);
-		printf("Total File Size: %d\n", fcbArray[fd].fileSize);
-		printf("Total Actual Block Count %d\n", fcbArray[fd].blockCount);
-		printf("Total Calc Block Count From File Size %ld\n", (long) ceil((double)fcbArray[fd].fileSize/(BLOCK_SIZE - sizeof(int))));
-		printf("End Closed\n");
+		//printf("Closed\n");
+		//printf("Initial Key: %d\n", fcbArray[fd].initialKey);
+		//printf("Final Key: %d\n", fcbArray[fd].prevKey);
+		//printf("Total File Size: %d\n", fcbArray[fd].fileSize);
+		//printf("Total Actual Block Count %d\n", fcbArray[fd].blockCount);
+		//printf("Total Calc Block Count From File Size %ld\n", (long) ceil((double)fcbArray[fd].fileSize/(BLOCK_SIZE - sizeof(int))));
+		//printf("End Closed\n");
 		free(fcbArray[fd].buf);
 		fcbArray[fd].buf = NULL;
 		if(fcbArray[fd].type == 'w'){
@@ -504,9 +504,8 @@ void b_close (b_io_fd fd)
 			free(parentDir);
 			free(entryToAdd);
 
-			printf("FILE SIZE: %d\n",entryToAdd->fileSizeBytes);
-			printf("FILE BLOCKS: %d\n", entryToAdd->entrySize);
-			// should be 4134
+			//printf("FILE SIZE: %d\n",entryToAdd->fileSizeBytes);
+			//printf("FILE BLOCKS: %d\n", entryToAdd->entrySize);
 		}else if(fcbArray[fd].type == 'r'){
 
 		}
