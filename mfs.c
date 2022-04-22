@@ -405,6 +405,9 @@ fdDir * fs_opendir(const char *name){
     //TODO: Should we use the name? or our current path, both seem identical
     // WARNING: This is assuming that the current path points to a dir!
     fs_Path* path = parsePath(currentPath);
+    if(!path || path->entry->isADir == 'F'){
+        return NULL;
+    }
     fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
     
     fdDir* openDir = malloc(sizeof(fdDir));
