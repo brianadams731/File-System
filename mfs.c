@@ -484,7 +484,7 @@ int fs_mv(char* srcFile, char* destDirPath){
         if(strcmp(currentPath,"/")== 0){
             strcpy(pathToDestDir, destDirPath);
         }else{
-            sprintf(pathToDestDir, "%s/%s",currentPath, destDirPath);
+            int len = snprintf(pathToDestDir, sizeof(pathToDestDir),"%s/%s",currentPath, destDirPath);
         }
         //printf("PATH TO DEST %s\n", pathToDestDir);
     }
@@ -524,17 +524,15 @@ int fs_mv(char* srcFile, char* destDirPath){
 
     fs_Path* pathToSrcFile = parsePath(pathToSrc);
 
-
     if(!pathToSrcFile || pathToSrcFile->entry->isADir == 'T'){
-        printf("CWD %s\n", currentDirectory);
-        printf("Path to Src %s\n", pathToSrc);
-        printf("Error: File not found\n");
         freePath(pathToSrcFile);
         free(destDir);
         return 0;
     }
+
     parentPath* srcParentPath = getParentPath(pathToSrc);
     fs_Path* parent = parsePath(srcParentPath->path);
+    free(srcParentPath);
 
     i = 0;
     for(i; i < MAX_DIR_ENTRIES; i++){
@@ -547,25 +545,18 @@ int fs_mv(char* srcFile, char* destDirPath){
     if(!parent){
         printf("Error: Parent to src not found");
         freePath(pathToSrcFile);
-        free(srcParentPath);
         freePath(parent);
         free(destDir);
         return 0;
     }
-
     fsDir* parentSrcDir = loadDirFromBlock(parent->entry->fileBlockLocation);
     addExistingDirEntry(destDir, pathToSrcFile->entry);
     rmDirEntry(parentSrcDir, pathToSrcFile->entry->filename);
-
     LBAwrite(destDir, DIR_SIZE, destDir->currentBlockLocation);
     LBAwrite(parentSrcDir, DIR_SIZE, parentSrcDir->currentBlockLocation);
-
     free(destDir);
-    
-    //freePath(pathToSrcFile);
-    //freePath(parent);
-    //free(srcParentPath);
-    
     free(parentSrcDir);
+    freePath(pathToSrcFile);        
+    freePath(parent);
     return 1;
 }

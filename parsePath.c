@@ -5,7 +5,7 @@
 #include "parsePath.h"
 
 fs_Path * parsePath(char* originalPath){
-    char* path = malloc(sizeof(path));
+    char* path = malloc(strlen(originalPath) + 1);
     if(originalPath[0] == '/'){
         strcpy(path,&originalPath[1]);
     }else{
@@ -17,12 +17,15 @@ fs_Path * parsePath(char* originalPath){
     // if root
     if(strcmp(path,"") == 0){
         fsPath = malloc(sizeof(fs_Path));
-        fsPath->currentPath = malloc(sizeof(path));
+        fsPath->currentPath = malloc(strlen(originalPath) + 1);
+        fsPath->entry = malloc(sizeof(fsDirEntry));
 
         fsDirEntry* traversedDir = findDirEntry(rootDir,".");
-        strcpy(fsPath->currentPath,"");
-        fsPath->entry = traversedDir;
 
+        strcpy(fsPath->currentPath,"");
+        memcpy(fsPath->entry, traversedDir, sizeof(fsDirEntry));
+
+        free(path);
         free(rootDir);
         return fsPath;
     }
@@ -34,10 +37,12 @@ fs_Path * parsePath(char* originalPath){
         token = strtok(NULL,"/");
         if(token == NULL){
             fsPath = malloc(sizeof(fs_Path));
-            fsPath->currentPath = malloc(sizeof(path));
-            
+            fsPath->currentPath = malloc(strlen(originalPath) + 1);
+            fsPath->entry = malloc(sizeof(fsDirEntry));
+
             strcpy(fsPath->currentPath, path);
-            fsPath->entry = traversedDir;
+            memcpy(fsPath->entry, traversedDir, sizeof(fsDirEntry));
+
             break;
         }else if(traversedDir->isADir == 'T'){
             fsDir* dir = loadDirFromBlock(traversedDir->fileBlockLocation);
@@ -48,13 +53,15 @@ fs_Path * parsePath(char* originalPath){
         }
     }
     free(rootDir);
+    free(path);
     return fsPath;
 }
 
 int freePath(fs_Path* fsPath){
     if(fsPath){
-        free(fsPath->currentPath);
-        free(fsPath);
+        //free(fsPath->currentPath);
+        //free(fsPath->entry);
+        //free(fsPath);
         return 1;
     }
     return 0;
@@ -97,9 +104,9 @@ parentPath* getParentPath(const char* path){
 parentPath* relPath(const char* currentDir, const char* relPath){
     char constructedPath[300];
     if(strcmp(currentDir,"/") == 0){
-        sprintf(constructedPath, "%s%s",currentDir, relPath);
+        snprintf(constructedPath, sizeof(constructedPath),"%s%s",currentDir, relPath);
     }else{
-        sprintf(constructedPath, "%s/%s",currentDir, relPath);
+        snprintf(constructedPath, sizeof(constructedPath),"%s/%s",currentDir, relPath);
     }
     return getParentPath(constructedPath);
 }
