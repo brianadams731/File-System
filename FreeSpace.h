@@ -62,13 +62,45 @@ typedef struct freeData{
     int end; // LAST BLOCK WRITTEN TO, this block is not free
     long freeBlockCount;
 } freeData;
+
+/*
+ * This function will mark a block as used in the vcb.
+ * X if a block is taken 
+ */
 void markUsedSpace(freeData file);
+/*
+ * This function will mark block by block as used in the vcb.
+ * X if a block is taken 
+ */
 void markUsedSpaceByBlock(int start, int numberOfBlocks);
+/*
+ * This function will mark a location in the vcb as free
+ * 0 for a free block
+ */
 void markFreeSpace(int location, int size);
+/*
+* @ params blockAmount: the amount of blocks needed by the user
+* This function will check to see if there is free space in
+* the vcb, will return the amount needed.
+* X if a block is taken 
+* O for a free block
+*/
 freeData getFreeSpace(int blockAmount);
 
+/*
+ * This function will check what has been written
+ * to the block in the vcb.
+ */
 char* getDataFromBlock(char* buffer, int bufferSize);
+/*
+ * This function will get a key from a block to
+ * keep track of keeping data together
+ */
 int getKeyFromBlock(char* buffer, int bufferSize);
+/*
+ * This function will write a key to a block that will
+ * keep track of data being stored. Allowing for contiguous
+ */
 int writeKeyToBuffer(char* buffer, int bufferSize, int key);
 
 #endif

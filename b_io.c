@@ -93,9 +93,17 @@ b_io_fd b_getFCB ()
 	return (-1);  //all in use
 	}
 	
-// Interface to open a buffered file
 // Modification of interface for this assignment, flags match the Linux flags for open
 // O_RDONLY, O_WRONLY, or O_RDWR
+/*
+ * b_io_fd b_open (char * filename, int flags)
+ * - Interface to open a buffered file
+ * - Our open will check for a valid parent path,
+ * it will handle for a relative or absolute path
+ * and parse through the file. Check if the file
+ * exists in the directory if not we setup
+ * the fcb.
+ */
 b_io_fd b_open (char * filename, int flags)
 	{
 	b_io_fd returnFd;
@@ -217,7 +225,18 @@ int b_seek (b_io_fd fd, off_t offset, int whence)
 
 
 
-// Interface to write function	
+/*
+ * int b_write (b_io_fd fd, char * buffer, int count)
+ * - First state (0)  - will be able to fit
+ * the entire buffer into the read block.
+ * - Second state (1) - will  fill the read buffer
+ *  copy the write location to a key, allowing 
+ * us to keep track of the filled blocks. Then reset
+ * the buffer and refill the remaining overflow.
+ * - Third state (2)  - will check if it can or
+ * can't fill the entire buffer then we repeat the
+ * steps of the second state
+ */
 int b_write (b_io_fd fd, char * buffer, int count)
 	{
 		

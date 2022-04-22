@@ -50,7 +50,13 @@ void popEntryFromCurrentPath(){
         strcpy(currentDirectory,"");
     }
 }
-
+/*
+* int fs_setcwd(char *buf)
+* - Takes a path and checks if that path is valid
+* and checks the name of the directory from the token
+* of the path that exists. Then we set the cwd location
+* of the found directory.
+*/
 int fs_setcwd(char *buf){
     if(strcmp(buf,".") == 0){
     }else if(strcmp(buf,"..") == 0){
@@ -81,7 +87,12 @@ int fs_setcwd(char *buf){
     return 0;
 }
 
-
+/*
+* char * fs_getcwd(char *buf, size_t size)
+* - This functiion copies an absolute pathname
+* of the current working directory to an array
+* using a pointer called buf.
+*/
 char * fs_getcwd(char *buf, size_t size){
     if(size >= strlen(currentPath)){
         strcpy(buf, currentPath);
@@ -92,6 +103,12 @@ char * fs_getcwd(char *buf, size_t size){
     return buf;
 }
 
+/*
+* int fs_isDir(char * path)
+* - takes a given path, checks if the path is valid
+* Checks to see if the path is an existing directory or not.
+* Directory marked as T.
+*/
 int fs_isDir(char * path){
     int isDir = 0;
     char usePath[300];
@@ -113,7 +130,12 @@ int fs_isDir(char * path){
     freePath(fileEntry);
     return isDir;
 }
-
+/*
+* int fs_isFile(char * path)
+* - Takes a given path, if the path is valid
+* checks to see if it is a file in the directory.
+* File is marked as F
+*/
 int fs_isFile(char * path){
     int isFile = 0;
     char usePath[300];
@@ -135,7 +157,13 @@ int fs_isFile(char * path){
     freePath(fileEntry);
     return isFile;
 }
-
+/*
+* int fs_mkdir(const char *pathname, mode_t mode)
+* - Creates a new directory that has a name
+* of the last token given in the path.
+* - Will update the parent directory information
+* into disk.
+*/
 int fs_mkdir(const char *pathname, mode_t mode){
     if(strcmp(pathname," ")==0){
         printf("Error: Dir must have a name\n");
@@ -203,6 +231,12 @@ int fs_mkdir(const char *pathname, mode_t mode){
     freePath(path);
     return 0;
 }
+
+/*
+* int fs_rmdir(const char *pathname)
+* - Removes the directory with a given valid path
+* Error checks for an invalid path or name.
+*/
 int fs_rmdir(const char *pathname){
     // THIS HAS ALREADY CHECKED IF PATH EXISTS AND IS A DIR
     char pathToParent[300];
@@ -265,6 +299,15 @@ int fs_rmdir(const char *pathname){
     // TODO: Is 0 success?
     return didDelete?0:1;
 }
+
+/*
+* int fs_delete(char* filename)
+* - Takes a given path and will check if that file
+* or directory exists using the parsepath functions.
+* - If the path is valid we load that block and
+* release the free space and set the data entries 
+* to default values.
+*/
 int fs_delete(char* filename){
     // THIS HAS ALREADY CHECKED IF PATH EXISTS AND IS FILE
     char pathToParent[300];
@@ -317,7 +360,12 @@ int fs_delete(char* filename){
 
     free(parentDir);
 }
-// ------------
+
+/*
+* fdDir * fs_opendir(const char *name)
+* - Will open a directory by giving it a directory name.
+* - Will return a pointer that stores the info of the directory.
+*/
 fdDir * fs_opendir(const char *name){
     //TODO: Should we use the name? or our current path, both seem identical
     // WARNING: This is assuming that the current path points to a dir!
@@ -337,7 +385,11 @@ fdDir * fs_opendir(const char *name){
     free(dir);
     return openDir;
 }
-
+/*
+* struct fs_diriteminfo *fs_readdir(fdDir *dirp)
+* - Returns a pointer to a structure that stores
+* the information for each directory entry
+*/
 struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     // THIS ASSUMES THAT ENTERIES OF "" MARK THE END OF THE ENTRY ARRAY
     if(dirp->dirEntryPosition > MAX_DIR_ENTRIES){
@@ -354,15 +406,22 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
     dirp->dirEntryPosition = dirp->dirEntryPosition + 1;
     return dirp->dirInfo;
 }
-
+/*
+* int fs_closedir(fdDir *dirp)
+* - deallocates and free memory for the open directory.
+* - resets the pointer to the directory information
+*/
 int fs_closedir(fdDir *dirp){
     free(dirp->dirInfo);
     free(dirp);
     return 0;
 }
-// -------------
-
-// -------------
+/*
+* int fs_stat(const char *path, struct fs_stat *buf)
+* - Takes a given path and finds the name of the 
+* directory entry
+* - Fills the data file of fs_stat
+*/
 int fs_stat(const char *path, struct fs_stat *buf){
     fs_Path* dirPath = parsePath(currentPath);
     int found = 0;

@@ -33,5 +33,9 @@ typedef struct VolumeControlBlock{
     char name[10];
  
 } VolumeControlBlock;
-
+/*
+* @param blockSize: represents the size of each logical block.
+* @param totalBlocks: Represents the total blocks available in the vcb
+* This function will initialize the vcb with default values.
+*/
 VolumeControlBlock* vcbInit(int blockSize,int totalBlocks);
