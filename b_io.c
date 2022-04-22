@@ -454,7 +454,7 @@ int b_read (b_io_fd fd, char * buffer, int count){
 		return oldCountToCopy + countToCopy;
 
 
-	}else if(readState == 2){
+	}else{
 		int bytesLeftInCurrentOpenBlock = BufferWithKeyOffset - fcbArray[fd].bytesReadInBlock;
 		int bytesLeftInFileToRead = fcbArray[fd].entry.fileSizeBytes - fcbArray[fd].totalBytesRead;
 		

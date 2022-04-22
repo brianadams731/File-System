@@ -73,16 +73,29 @@ int fs_setcwd(char *buf){
     }else{
         // Rel Path
         //Checking if buf is a valid directory
-        fs_Path* path = parsePath(currentPath);
+        parentPath* constructedPath = relPath(currentPath, buf);
+        fs_Path* path = parsePath(constructedPath->path);
+        if(!path){
+            free(constructedPath);
+            free(path);
+            return 1;
+        }
         fsDir* dir = loadDirFromBlock(path->entry->fileBlockLocation);
-        fsDirEntry* newDir = findDirEntry(dir, buf);
+        fsDirEntry* newDir = findDirEntry(dir,constructedPath->name);
+
         freePath(path);
         free(dir);
         if(newDir == NULL || newDir->isADir != 'T'){
+            free(constructedPath);
             return 1;
         }
         // If buf is valid, add to path
-        addEntryToCurrentPath(buf);
+        if(strcmp(constructedPath->path,"") != 0){
+            strcpy(currentPath,constructedPath->path);
+        }
+        
+        addEntryToCurrentPath(constructedPath->name);
+        free(constructedPath);
     }
     return 0;
 }
@@ -111,14 +124,19 @@ char * fs_getcwd(char *buf, size_t size){
 */
 int fs_isDir(char * path){
     int isDir = 0;
-    char usePath[300];
-    if(path[0] != '/'){
-
+    char usePath[325];
+    if(path[0] != '/'){       
         strcpy(usePath, currentPath);
         if(strcmp(usePath, "/") != 0){
             strcpy(&usePath[strlen(currentPath)],"/");
         }
         strcpy(&usePath[strlen(usePath)],path);
+
+        /*
+        parentPath* constructedRelPath = relPath(currentPath, path);
+        sprintf(usePath, "%s/%s", constructedRelPath->path, constructedRelPath->name);
+        free(constructedRelPath);
+        */
     }else{
         strcpy(usePath,path);
     }
@@ -182,8 +200,10 @@ int fs_mkdir(const char *pathname, mode_t mode){
         strcpy(dirName, parentData->name);
         free(parentData);
     }else{
-        strcpy(pathToParent, currentPath);
-        strcpy(dirName, pathname);
+        parentPath* constructedRel = relPath(currentPath, pathname);
+        strcpy(pathToParent, constructedRel->path);
+        strcpy(dirName, constructedRel->name);
+        free(constructedRel);
     }
 
     fs_Path* path = parsePath(pathToParent);
@@ -260,14 +280,9 @@ int fs_rmdir(const char *pathname){
         strcpy(dirName, pathname);
     }
 
-    fs_Path* parentDirEntry = malloc(sizeof(fs_Path));
-    parentDirEntry = parsePath(pathToParent);
-
-    fsDir* parentDir = malloc(sizeof(fsDir));
-    parentDir = loadDirFromBlock(parentDirEntry->entry->fileBlockLocation);
-
-    fsDirEntry* dirEntryToDelete = malloc(sizeof(fsDirEntry));
-    dirEntryToDelete = findDirEntry(parentDir, dirName);
+    fs_Path* parentDirEntry = parsePath(pathToParent);
+    fsDir* parentDir = loadDirFromBlock(parentDirEntry->entry->fileBlockLocation);
+    fsDirEntry* dirEntryToDelete = findDirEntry(parentDir, dirName);
 
 
     if(!dirEntryToDelete){
@@ -359,6 +374,7 @@ int fs_delete(char* filename){
     LBAwrite(parentDir, parentDir->directryEntries[0].entrySize, parentDir->currentBlockLocation);
 
     free(parentDir);
+    return 0;
 }
 
 /*

@@ -54,7 +54,7 @@ void initFreeSpace()
     }
 
 
-    int retValue = LBAwrite( &freeArray,FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
+    LBAwrite( &freeArray,FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
     
 }
 
@@ -164,8 +164,8 @@ void markUsedSpace(freeData file){
             freeSpaceArray[i] = 'X';
         }
     }
-    free(freeSpaceArray);
     LBAwrite(freeSpaceArray, FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
+    free(freeSpaceArray);
 }
 
 void markFreeSpace(int location, int size){
@@ -176,8 +176,8 @@ void markFreeSpace(int location, int size){
         freeSpaceArray[location + i] = 'O';
 
     }
-    free(freeSpaceArray);
     LBAwrite(freeSpaceArray, FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
+    free(freeSpaceArray);
 }
 
 void markUsedSpaceByBlock(int start, int numberOfBlocks){
@@ -189,8 +189,8 @@ void markUsedSpaceByBlock(int start, int numberOfBlocks){
             freeSpaceArray[i] = 'X';
         }
     }
-    free(freeSpaceArray);
     LBAwrite(freeSpaceArray, FREE_BLOCK_CONSUMPTION, FREE_ARRAY_LOCATION);
+    free(freeSpaceArray);
 }
 
 int getKeyFromBlock(char* buffer, int bufferSize){
@@ -201,6 +201,7 @@ int getKeyFromBlock(char* buffer, int bufferSize){
 
 int writeKeyToBuffer(char* buffer, int bufferSize, int key){
     memcpy(&buffer[bufferSize-sizeof(int)], &key, sizeof(int));
+    return 1;
 }
 
 char* getDataFromBlock(char* buffer, int bufferSize){

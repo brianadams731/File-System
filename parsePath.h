@@ -24,7 +24,10 @@ parentPath* getParentPath(const char* path);
 */
 fs_Path*  parsePath(char* path);
 
+
 /*
 *   @ returns: 1 indicates path was deallocated correctly, 0 indicates error
 */
 int freePath(fs_Path* fs_path);
+
+parentPath* relPath(const char* currentDir,const char* relPath);

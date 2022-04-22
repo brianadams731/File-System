@@ -68,14 +68,38 @@ parentPath* getParentPath(const char* path){
     parentPath* retPath = malloc(sizeof(parentPath));
 
     int indexOfLastSlash = strlen(path);
-    for(indexOfLastSlash; indexOfLastSlash > 0; indexOfLastSlash--){
+    int found = 0;
+    for(indexOfLastSlash; indexOfLastSlash >= 0; indexOfLastSlash--){
         if(path[indexOfLastSlash] == '/'){
+            found = 1;
             break;
         }
     }
-    indexOfLastSlash++;
-    strcpy(retPath->name,&path[indexOfLastSlash]);
-    strncpy(retPath->path, path, indexOfLastSlash - 1);
-    retPath->path[indexOfLastSlash-1] = '\0';
+
+    if(found == 1){
+        indexOfLastSlash++;
+        strcpy(retPath->name,&path[indexOfLastSlash]);
+        if(indexOfLastSlash > 0){
+            strncpy(retPath->path, path, indexOfLastSlash - 1);
+            retPath->path[indexOfLastSlash-1] = '\0';
+        }else{
+            strcpy(retPath->path, "");
+        }
+    }else{
+        strcpy(retPath->name,path);
+        strcpy(retPath->path,"");
+    }
+
     return retPath;
+}
+
+
+parentPath* relPath(const char* currentDir, const char* relPath){
+    char constructedPath[300];
+    if(strcmp(currentDir,"/") == 0){
+        sprintf(constructedPath, "%s%s",currentDir, relPath);
+    }else{
+        sprintf(constructedPath, "%s/%s",currentDir, relPath);
+    }
+    return getParentPath(constructedPath);
 }
