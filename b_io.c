@@ -245,7 +245,10 @@ int b_write (b_io_fd fd, char * buffer, int count)
 	if ((fd < 0) || (fd >= MAXFCBS)){
 		return (-1); 					//invalid file descriptor
 	}
-
+	if(count < 0){
+		printf("ERROR: Invalid linux file\n");
+		return -1;
+	}
 	/* Write States
 	* 0 - readBuffer fit inBuffer
 	* 1 - readBuffer needs to wite block, then continue to be filled by inBuffer
