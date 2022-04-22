@@ -125,18 +125,19 @@ char * fs_getcwd(char *buf, size_t size){
 int fs_isDir(char * path){
     int isDir = 0;
     char usePath[325];
-    if(path[0] != '/'){       
+    if(path[0] != '/'){ 
+        /*      
         strcpy(usePath, currentPath);
         if(strcmp(usePath, "/") != 0){
             strcpy(&usePath[strlen(currentPath)],"/");
         }
         strcpy(&usePath[strlen(usePath)],path);
-
-        /*
-        parentPath* constructedRelPath = relPath(currentPath, path);
-        sprintf(usePath, "%s/%s", constructedRelPath->path, constructedRelPath->name);
-        free(constructedRelPath);
         */
+        
+        parentPath* constructedRelPath = relPath(currentPath, path);
+        snprintf(usePath, sizeof(usePath),"%s/%s", constructedRelPath->path, constructedRelPath->name);
+        free(constructedRelPath);
+        
     }else{
         strcpy(usePath,path);
     }
@@ -156,14 +157,19 @@ int fs_isDir(char * path){
 */
 int fs_isFile(char * path){
     int isFile = 0;
-    char usePath[300];
+    char usePath[326];
 
     if(path[0] != '/'){
+        /*
         strcpy(usePath, currentPath);
         if(strcmp(usePath, "/") != 0){
             strcpy(&usePath[strlen(currentPath)],"/");
         }
         strcpy(&usePath[strlen(usePath)],path);
+        */
+        parentPath* constructedRelPath = relPath(currentPath, path);
+        snprintf(usePath, sizeof(usePath),"%s/%s", constructedRelPath->path, constructedRelPath->name);
+        free(constructedRelPath);
     }else{
         strcpy(usePath,path);
     }
@@ -260,7 +266,7 @@ int fs_mkdir(const char *pathname, mode_t mode){
 int fs_rmdir(const char *pathname){
     // THIS HAS ALREADY CHECKED IF PATH EXISTS AND IS A DIR
     char pathToParent[300];
-    char dirName[25];
+    char dirName[30];
     if(strcmp(pathname,".") == 0){
         printf("Error: Invalid Path\n");
         return 1;
@@ -276,8 +282,15 @@ int fs_rmdir(const char *pathname){
         strcpy(dirName, parentData->name);
         free(parentData);
     }else{
+        parentPath* constructedRelPath = relPath(currentPath, pathname);
+        strcpy(pathToParent, constructedRelPath->path);
+        strcpy(dirName, constructedRelPath->name);
+        free(constructedRelPath);
+
+        /*
         strcpy(pathToParent, currentPath);
         strcpy(dirName, pathname);
+        */
     }
 
     fs_Path* parentDirEntry = parsePath(pathToParent);
@@ -339,15 +352,21 @@ int fs_delete(char* filename){
         strcpy(dirName, parentData->name);
         free(parentData);
     }else{
+        parentPath* constructedRelPath = relPath(currentPath, filename);
+        strcpy(pathToParent, constructedRelPath->path);
+        strcpy(dirName, constructedRelPath->name);
+        free(constructedRelPath);
+        /*
         strcpy(pathToParent, currentPath);
         strcpy(dirName, filename);
+        */
     }
 
     fs_Path* parsedPath = parsePath(pathToParent);
     fsDir* parentDir = loadDirFromBlock(parsedPath->entry->fileBlockLocation);
     freePath(parsedPath);
     fsDirEntry* entryToRemove = findDirEntry(parentDir, dirName);
-
+    //printf("ENTRY TO REMOVE %s\n", entryToRemove->filename);
     long checkBlock = (long) ceil(((double)entryToRemove->fileSizeBytes)/(BLOCK_SIZE - sizeof(int)));
     int totalBlock = entryToRemove->entrySize;
     //printf("REMOVE\n");
@@ -370,7 +389,7 @@ int fs_delete(char* filename){
     freeCount = getFreeSpace(1);
     //printf("Free Block Count After: %ld\n", freeCount.freeBlockCount);
     
-    rmDirEntry(parentDir, filename);
+    rmDirEntry(parentDir, entryToRemove->filename);
     LBAwrite(parentDir, parentDir->directryEntries[0].entrySize, parentDir->currentBlockLocation);
 
     free(parentDir);
