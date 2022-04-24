@@ -58,6 +58,7 @@ typedef struct b_fcb
 	int prevKey;
 	fsDirEntry entry;
 	char accessMode[3];  // -- or rwd
+	int flags;
 
 	} b_fcb;
 	
@@ -161,6 +162,7 @@ b_io_fd b_open (char * filename, int flags)
 		fcbArray[returnFd].initialKey = 0;
 		fcbArray[returnFd].blockCount = 0;
 		fcbArray[returnFd].fileSize = 0;
+		fcbArray[returnFd].flags = flags;
 
 		
 		if(flags == (O_WRONLY | O_CREAT | O_TRUNC)){
@@ -185,14 +187,33 @@ b_io_fd b_open (char * filename, int flags)
 				return -1;
 			}
 		}
+		if((flags & O_APPEND) != 0){
+			fsDir* dir = loadDirFromBlock(fcbArray[returnFd].blockNumberOfParentDir);
+			fsDirEntry* dirEntry = findDirEntry(dir, fcbArray[returnFd].name);
+			if(!dirEntry){
+				printf("Error: File Does not Exist\n");
+				return -1;
+			}
+			memcpy(&fcbArray[returnFd].entry, dirEntry, sizeof(fsDirEntry));
+			free(dir);
+			
+			fcbArray[returnFd].type = 'a';
+			fcbArray[returnFd].readBlock = malloc(BLOCK_SIZE);
+			fcbArray[returnFd].initialKey = dirEntry->fileBlockLocation;
+			fcbArray[returnFd].prevKey = dirEntry->fileBlockLocation;
+
+			fcbArray[returnFd].totalBytesRead = dirEntry->fileSizeBytes;
+			fcbArray[returnFd].fileSize = dirEntry->fileSizeBytes;
+			fcbArray[returnFd].blockCount = dirEntry->entrySize;
+			
+			b_seek(returnFd, dirEntry->fileSizeBytes, 0);
+		}
 		if(flags == (O_RDONLY)){
-			//printf("READ\n");
-			// read
 			// Adding dir entry of file to read;
 			fsDir* dir = loadDirFromBlock(fcbArray[returnFd].blockNumberOfParentDir);
 			fsDirEntry* dirEntry = findDirEntry(dir, fcbArray[returnFd].name);
 			if(!dirEntry){
-				printf("Error: File Does not Exist");
+				printf("Error: File Does not Exist\n");
 				return -1;
 			}
 			memcpy(&fcbArray[returnFd].entry, dirEntry, sizeof(fsDirEntry));
@@ -219,7 +240,36 @@ int b_seek (b_io_fd fd, off_t offset, int whence)
 		return (-1); 					//invalid file descriptor
 		}
 		
+	int initalBlock = fcbArray[fd].entry.fileBlockLocation;
+	char* bufferBlock = malloc(sizeof(BLOCK_SIZE));
+
+
+	
+	if((fcbArray[fd].flags & O_APPEND) != 0){
+		int totalBlocksToIterate = fcbArray[fd].entry.entrySize;
+
+		int count = 0;
+		while(count <= fcbArray[fd].entry.entrySize){
+			if(count == fcbArray[fd].entry.entrySize){
+				int leftInBlock = fcbArray[fd].entry.fileSizeBytes % BufferWithKeyOffset;
+				LBAread(fcbArray[fd].readBlock, 1, fcbArray[fd].prevKey);
+				fcbArray[fd].bytesReadInBlock = leftInBlock;
+				break;
+			}else{
+				LBAread(fcbArray[fd].readBlock, 1, fcbArray[fd].prevKey);
+				fcbArray[fd].prevKey = getKeyFromBlock(fcbArray[fd].readBlock, BLOCK_SIZE);
+				count++;
+			}
+			
+		}
 		
+	}else if(fcbArray[fd].flags & O_TRUNC != 0){
+		fcbArray[fd].type = '-'; // NO FILE ENTRY WILL BE CREATED
+
+	}else if(fcbArray[fd].flags & O_WRONLY != 0){
+		fcbArray[fd].type = '-'; // NO FILE ENTRY WILL BE CREATED
+	}
+	free(bufferBlock);	
 	return (0); //Change this
 	}
 
@@ -526,9 +576,18 @@ void b_close (b_io_fd fd)
 			free(parentDir);
 			free(entryToAdd);
 
-			//printf("FILE SIZE: %d\n",entryToAdd->fileSizeBytes);
-			//printf("FILE BLOCKS: %d\n", entryToAdd->entrySize);
-		}else if(fcbArray[fd].type == 'r'){
-
+		}else if(fcbArray[fd].type == 'a'){
+			fsDir* parentDir = loadDirFromBlock(fcbArray[fd].blockNumberOfParentDir);
+			int i;
+			for(i=0;i<MAX_DIR_ENTRIES;i++){
+				if(strcmp(parentDir->directryEntries[i].filename,fcbArray[fd].entry.filename) == 0){
+					parentDir->directryEntries[i].fileSizeBytes = fcbArray[fd].fileSize;
+					parentDir->directryEntries[i].entrySize = fcbArray[fd].blockCount;
+					parentDir->directryEntries[i].lastModified = getCurrentDateTime();
+				}
+			}
+			LBAwrite(parentDir, DIR_SIZE, parentDir->currentBlockLocation);
+			free(parentDir);
+			free(fcbArray[fd].readBlock);
 		}
 	}

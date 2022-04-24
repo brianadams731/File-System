@@ -71,6 +71,8 @@ int cmd_pwd (int argcnt, char *argvec[]);
 int cmd_history (int argcnt, char *argvec[]);
 int cmd_help (int argcnt, char *argvec[]);
 
+int cmd_cat2fs (int argcnt, char *argvec[]);
+
 dispatch_t dispatchTable[] = {
 	{"ls", cmd_ls, "Lists the file in a directory"},
 	{"cp", cmd_cp, "Copies a file - source [dest]"},
@@ -82,7 +84,8 @@ dispatch_t dispatchTable[] = {
 	{"cd", cmd_cd, "Changes directory"},
 	{"pwd", cmd_pwd, "Prints the working directory"},
 	{"history", cmd_history, "Prints out the history"},
-	{"help", cmd_help, "Prints out help"}
+	{"help", cmd_help, "Prints out help"},
+	{"cat2fs", cmd_cat2fs, "Appends a file from the Linux file system to a file in the test file system"},
 };
 
 static int dispatchcount = sizeof (dispatchTable) / sizeof (dispatch_t);
@@ -427,6 +430,50 @@ int cmd_cp2fs (int argcnt, char *argvec[])
 	return 0;
 	}
 	
+/****************************************************
+*  CAT file from Linux to test file system commmand
+****************************************************/
+int cmd_cat2fs (int argcnt, char *argvec[])
+	{
+#if (CMDCP2FS_ON == 1)				
+	int testfs_fd;
+	int linux_fd;
+	char * src;
+	char * dest;
+	int readcnt;
+	char buf[BUFFERLEN];
+	
+	switch (argcnt)
+		{
+		case 2:	//only one name provided
+			src = argvec[1];
+			dest = src;
+			break;
+			
+		case 3:
+			src = argvec[1];
+			dest = argvec[2];
+			break;
+		
+		default:
+			printf("Usage: cat2fs Linuxsrcfile [destfile]\n");
+			return (-1);
+		}
+	
+	
+	testfs_fd = b_open (dest, O_APPEND);
+	linux_fd = open (src, O_RDONLY);
+	do 
+		{
+		readcnt = read (linux_fd, buf, BUFFERLEN);
+		b_write (testfs_fd, buf, readcnt);
+		} while (readcnt == BUFFERLEN);
+	b_close (testfs_fd);
+	close (linux_fd);
+#endif
+	return 0;
+	}
+
 /****************************************************
 *  cd commmand
 ****************************************************/
