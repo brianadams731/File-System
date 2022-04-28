@@ -1,4 +1,19 @@
-
+/**************************************************************
+* Class:  CSC-415-02 - Spring 2022
+* Names: Salaar Karimzadeh,
+         Brandon Cruz-Youll,
+         Brian Adams,
+         Jasmine Thind
+* Student IDs:920765141, 902899041, 921039987, 920767229
+* GitHub Name: BeeSeeWhy
+* Group Name: Zombies
+* Project: Basic File System
+*
+* File: parsePath.h
+*
+* Description: This file provides the parse path utility used throughout the
+*  file system. 
+**************************************************************/
 typedef struct fs_Path{
     char* currentPath;
     fsDirEntry* entry;

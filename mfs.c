@@ -1,3 +1,21 @@
+/**************************************************************
+* Class:  CSC-415-02 - Spring 2022
+* Names: Salaar Karimzadeh,
+         Brandon Cruz-Youll,
+         Brian Adams,
+         Jasmine Thind
+* Student IDs:920765141, 902899041, 921039987, 920767229
+* GitHub Name: BeeSeeWhy
+* Group Name: Zombies
+* Project: Basic File System
+*
+* File: mfs.c
+*
+* Description: This is the file system interface implementation file.
+*	This is the interface needed by the driver to interact with
+*	your filesystem.
+* 
+**************************************************************/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
